@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PaymentPanel } from "@/components/PaymentPanel";
+import { Steps } from "@/components/Steps";
 import { getBookingContext } from "@/lib/booking";
 import { MOCK_PAYMENTS } from "@/lib/config";
 import { formatMoney } from "@/lib/money";
@@ -27,12 +28,15 @@ export default async function PayPage({
   return (
     <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
       <section className="space-y-5">
-        <Link
-          href={`/events/${event.slug}`}
-          className="text-xs font-medium uppercase tracking-[0.16em] text-mute transition hover:text-ink"
-        >
-          ← Back to the event
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href={`/events/${event.slug}`}
+            className="text-xs font-medium uppercase tracking-[0.16em] text-mute transition hover:text-ink"
+          >
+            ← Back to the event
+          </Link>
+          <Steps current={2} />
+        </div>
 
         <div className="relative overflow-hidden rounded-2xl border border-line bg-surface p-6">
           <div
@@ -44,7 +48,14 @@ export default async function PayPage({
               Order summary
             </p>
             <h1 className="display mt-2 text-2xl leading-tight text-ink">{event.name}</h1>
-            <p className="mt-1 text-sm text-mute">{event.venue}</p>
+            <p className="mt-1 text-sm text-mute">
+              {new Intl.DateTimeFormat("en-GB", {
+                dateStyle: "full",
+                timeStyle: "short",
+                timeZone: event.timezone,
+              }).format(new Date(event.starts_at))}
+            </p>
+            <p className="text-sm text-mute">{event.venue}</p>
 
             <dl className="mt-5 space-y-3 border-t border-dashed border-line pt-5 text-sm">
               <Row

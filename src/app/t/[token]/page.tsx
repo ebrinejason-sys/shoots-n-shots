@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CopyLink } from "@/components/CopyLink";
 import { MarkUsedButton } from "@/components/MarkUsedButton";
+import { Steps } from "@/components/Steps";
 import { getStaffSession } from "@/lib/auth";
 import { APP_URL } from "@/lib/config";
 import { formatMoney } from "@/lib/money";
@@ -43,6 +45,10 @@ export default async function TicketPage({
           ← Shots &amp; Secrets
         </Link>
         <StateBadge state={state} />
+      </div>
+
+      <div className="flex justify-center pb-1">
+        <Steps current={3} />
       </div>
 
       <article className="overflow-hidden rounded-3xl border border-line bg-surface">
@@ -97,6 +103,20 @@ export default async function TicketPage({
           />
         </dl>
       </article>
+
+      <div className="flex gap-2">
+        <CopyLink url={`${APP_URL}/t/${token}`} />
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(
+            `My ticket for ${ticket.eventName} — ${APP_URL}/t/${token}`,
+          )}`}
+          target="_blank"
+          rel="noreferrer"
+          className="btn-ghost flex-1 text-center"
+        >
+          Share
+        </a>
+      </div>
 
       {state === "USED" && ticket.usedAt ? (
         <p className="rounded-xl border border-line bg-surface px-4 py-3 text-sm text-mute">

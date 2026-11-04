@@ -53,6 +53,7 @@ export function Scanner() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const frameRef = useRef<number | null>(null);
+  const resultRef = useRef<HTMLDivElement | null>(null);
   const lastScanRef = useRef<{ code: string; at: number } | null>(null);
   const busyRef = useRef(false);
 
@@ -162,6 +163,10 @@ export function Scanner() {
 
   useEffect(() => stopCamera, [stopCamera]);
 
+  useEffect(() => {
+    if (report) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [report]);
+
   return (
     <div className="mx-auto max-w-lg space-y-4">
       <div className="overflow-hidden rounded-2xl border border-line bg-black">
@@ -214,7 +219,10 @@ export function Scanner() {
       </form>
 
       {report ? (
-        <div className={`rounded-2xl border p-5 ${OUTCOME_STYLES[report.outcome]}`}>
+        <div
+          ref={resultRef}
+          className={`rounded-2xl border p-5 ${OUTCOME_STYLES[report.outcome]}`}
+        >
           <p
             className={`text-[11px] font-semibold uppercase tracking-[0.24em] ${OUTCOME_TEXT[report.outcome]}`}
           >
@@ -237,6 +245,12 @@ export function Scanner() {
               </div>
             </dl>
           ) : null}
+          <button
+            onClick={() => setReport(null)}
+            className="mt-4 w-full rounded-xl border border-line px-4 py-2.5 text-sm font-medium text-mute transition hover:border-accent/60 hover:text-ink"
+          >
+            Scan next
+          </button>
         </div>
       ) : null}
     </div>

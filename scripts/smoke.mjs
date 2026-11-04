@@ -1,6 +1,6 @@
 // End-to-end smoke test. Needs `npm run dev` running and a seeded database.
 // Usage: npm run smoke   (optionally SMOKE_BASE_URL=http://localhost:3000)
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,7 +30,7 @@ const BASE_URL = (process.env.SMOKE_BASE_URL ?? "http://localhost:3000").replace
 const DATABASE_URL =
   process.env.DATABASE_URL ?? "postgres://sns:sns_dev_password@localhost:5432/sns_tickets";
 const PASSCODE = process.env.STAFF_PASSCODE ?? "staff1234";
-const SLUG = process.env.SMOKE_EVENT_SLUG ?? "ss-night-live";
+const SLUG = process.env.SMOKE_EVENT_SLUG ?? "shots-and-secrets";
 
 let passed = 0;
 
@@ -129,7 +129,8 @@ try {
   // --- UNPAID: a ticket row can only exist for an unpaid booking if it was
   // issued and the booking later lost its PAID state; simulate that directly.
   const pending = await book(1);
-  const unpaidToken = "unpaid-probe-0000000000000000000";
+  // Must stay 32 chars: the scan endpoint only accepts ticket-shaped tokens.
+  const unpaidToken = `unpaid-probe-${randomBytes(10).toString("hex").slice(0, 19)}`;
   const pendingId = await db.query(`SELECT id FROM bookings WHERE reference = $1`, [pending.reference]);
   await db.query(`INSERT INTO tickets (booking_id, token_hash) VALUES ($1, $2)`, [
     pendingId.rows[0].id,

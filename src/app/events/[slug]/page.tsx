@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BookingForm } from "@/components/BookingForm";
+import { Steps } from "@/components/Steps";
 import { getEventBySlug } from "@/lib/booking";
 import { formatMoney } from "@/lib/money";
 
@@ -17,12 +18,15 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
   return (
     <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
       <section className="space-y-6">
-        <Link
-          href="/"
-          className="text-xs font-medium uppercase tracking-[0.16em] text-mute transition hover:text-ink"
-        >
-          ← All events
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href="/"
+            className="text-xs font-medium uppercase tracking-[0.16em] text-mute transition hover:text-ink"
+          >
+            ← All events
+          </Link>
+          <Steps current={1} />
+        </div>
 
         <div className="relative overflow-hidden rounded-3xl border border-line bg-surface p-7">
           <div

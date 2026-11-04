@@ -17,9 +17,18 @@ body {
   min-height: 100vh;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 ::selection {
   background: rgba(47, 109, 255, 0.35);
   color: #ffffff;
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid rgba(47, 109, 255, 0.75);
+  outline-offset: 2px;
 }
 
 /* Poster display type: heavy, tight, all caps. */

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/LogoutButton";
+import { RefreshButton } from "@/components/RefreshButton";
 import { getAdminTotals, listBookings, listRecentScans } from "@/lib/booking";
 import { getStaffSession } from "@/lib/auth";
 import { formatMoney } from "@/lib/money";
@@ -41,7 +42,10 @@ export default async function AdminPage() {
           <h1 className="display mt-1 text-3xl leading-none text-ink">Operations</h1>
           <p className="mt-2 text-sm text-mute">Signed in as {session.label}</p>
         </div>
-        <LogoutButton />
+        <div className="flex items-center gap-2">
+          <RefreshButton />
+          <LogoutButton />
+        </div>
       </div>
 
       <section className="grid gap-3 sm:grid-cols-3">

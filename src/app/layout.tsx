@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SiteNav } from "@/components/SiteNav";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,14 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="text-hot">&amp;</span>
               <span className="text-ink">Secrets</span>
             </Link>
-            <nav className="flex items-center gap-5 text-xs font-medium uppercase tracking-[0.14em] text-mute">
-              <Link href="/scanner" className="transition hover:text-ink">
-                Scanner
-              </Link>
-              <Link href="/admin" className="transition hover:text-ink">
-                Admin
-              </Link>
-            </nav>
+            <SiteNav />
           </div>
           <div className="hairline h-px w-full opacity-40" />
         </header>

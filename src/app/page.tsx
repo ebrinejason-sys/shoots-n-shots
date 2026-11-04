@@ -49,6 +49,16 @@ export default async function HomePage() {
             <Chip>Drinks on the house</Chip>
             <Chip>Dress code: party comfy</Chip>
           </div>
+
+          {events[0] ? (
+            <Link
+              href={`/events/${events[0].slug}`}
+              className="btn-primary mt-8 inline-flex items-center gap-2"
+            >
+              Get tickets
+              <span aria-hidden>→</span>
+            </Link>
+          ) : null}
         </div>
       </section>
 
