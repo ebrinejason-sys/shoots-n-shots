@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sns-ticketing-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sns
+      POSTGRES_PASSWORD: sns_dev_password
+      POSTGRES_DB: sns_tickets
+    ports:
+      - "5432:5432"
+    volumes:
+      - sns_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sns -d sns_tickets"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  sns_pgdata:
