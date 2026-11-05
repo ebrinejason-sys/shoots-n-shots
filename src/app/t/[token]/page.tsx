@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { CopyLink } from "@/components/CopyLink";
 import { MarkUsedButton } from "@/components/MarkUsedButton";
 import { Steps } from "@/components/Steps";
+import { resolveAppUrl } from "@/lib/app-url";
 import { getStaffSession } from "@/lib/auth";
-import { APP_URL } from "@/lib/config";
 import { formatMoney } from "@/lib/money";
 import { buildQrMatrix, qrToSvg } from "@/lib/qr";
 import { getTicketView } from "@/lib/scan";
@@ -30,7 +30,9 @@ export default async function TicketPage({
   if (!ticket) notFound();
 
   const staff = await getStaffSession();
-  const qrSvg = qrToSvg(buildQrMatrix(`${APP_URL}/t/${token}`), { scale: 8, margin: 4 });
+  const appUrl = await resolveAppUrl();
+  const ticketUrl = `${appUrl}/t/${token}`;
+  const qrSvg = qrToSvg(buildQrMatrix(ticketUrl), { scale: 8, margin: 4 });
 
   const paid = ticket.bookingStatus === "PAID";
   const state = !paid ? "UNPAID" : ticket.status;
@@ -59,10 +61,15 @@ export default async function TicketPage({
           />
           <div className="relative">
             <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-hot">
-              Admit {ticket.quantity > 1 ? `${ticket.quantity} people` : "one"}
+              Admit {ticket.admits > 1 ? `${ticket.admits} people` : "one"}
             </p>
             <h1 className="display mt-2 text-3xl leading-none text-ink">{ticket.eventName}</h1>
             <p className="mt-2 text-sm text-mute">{ticket.eventVenue}</p>
+            {ticket.attendeeLabel ? (
+              <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-accent">
+                {ticket.attendeeLabel}
+              </p>
+            ) : null}
             <p className="text-sm text-mute">
               {new Intl.DateTimeFormat("en-GB", {
                 dateStyle: "full",
@@ -82,7 +89,8 @@ export default async function TicketPage({
             dangerouslySetInnerHTML={{ __html: qrSvg }}
           />
           <p className="text-center text-xs text-mute/70">
-            Show this code at the entrance. One scan admits the whole booking.
+            Show this code at the entrance. One scan admits{" "}
+            {ticket.admits === 1 ? "one guest" : `all ${ticket.admits} guests`}.
           </p>
         </div>
 
@@ -92,7 +100,7 @@ export default async function TicketPage({
             label="Reference"
             value={<span className="font-mono text-xs">{ticket.reference}</span>}
           />
-          <Field label="Tickets" value={String(ticket.quantity)} />
+          <Field label="Admits" value={String(ticket.admits)} />
           <Field
             label="Paid"
             value={
@@ -105,10 +113,10 @@ export default async function TicketPage({
       </article>
 
       <div className="flex gap-2">
-        <CopyLink url={`${APP_URL}/t/${token}`} />
+        <CopyLink url={ticketUrl} />
         <a
           href={`https://wa.me/?text=${encodeURIComponent(
-            `My ticket for ${ticket.eventName} — ${APP_URL}/t/${token}`,
+            `My ticket for ${ticket.eventName} — ${ticketUrl}`,
           )}`}
           target="_blank"
           rel="noreferrer"

@@ -15,32 +15,84 @@ interface Props {
   phone: string;
 }
 
+async function verifyPayment(reference: string, transactionId: string): Promise<string | null> {
+  const response = await fetch(
+    `/api/payments/verify?reference=${encodeURIComponent(reference)}` +
+      `&transaction_id=${encodeURIComponent(transactionId)}`,
+  );
+  if (!response.ok) return null;
+  const data = (await response.json()) as { status?: string };
+  return data.status ?? null;
+}
+
 export function PaymentPanel(props: Props) {
   const [status, setStatus] = useState(props.initialStatus);
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [exhausted, setExhausted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Flutterwave's webhook can land a moment after the redirect, so poll the
+  // verify endpoint instead of relying on a single check during page load.
   useEffect(() => {
     if (!props.transactionId || status === "PAID") return;
+    const transactionId = props.transactionId;
     let cancelled = false;
+    let attempts = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
-    (async () => {
+    async function poll() {
+      attempts += 1;
       try {
-        const response = await fetch(
-          `/api/payments/verify?reference=${encodeURIComponent(props.reference)}` +
-            `&transaction_id=${encodeURIComponent(props.transactionId as string)}`,
-        );
-        const data = (await response.json()) as { status?: string };
-        if (!cancelled && data.status === "paid") setStatus("PAID");
+        const next = await verifyPayment(props.reference, transactionId);
+        if (cancelled) return;
+        if (next === "paid") {
+          setStatus("PAID");
+          return;
+        }
+        if (next === "failed") {
+          setStatus("FAILED");
+          return;
+        }
       } catch {
-        // The webhook will still confirm it; nothing to do here.
+        // Transient failure — the next attempt may succeed.
       }
-    })();
+      if (cancelled) return;
+      if (attempts >= 10) {
+        setExhausted(true);
+        return;
+      }
+      timer = setTimeout(poll, 3000);
+    }
 
+    void poll();
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
     };
   }, [props.reference, props.transactionId, status]);
+
+  async function checkAgain() {
+    if (!props.transactionId) return;
+    setChecking(true);
+    setError(null);
+    try {
+      const next = await verifyPayment(props.reference, props.transactionId);
+      if (next === "paid") {
+        setStatus("PAID");
+        return;
+      }
+      if (next === "failed") {
+        setStatus("FAILED");
+        return;
+      }
+      setError("Not confirmed yet — if you were charged, try again in a moment.");
+    } catch {
+      setError("Network error — please try again");
+    } finally {
+      setChecking(false);
+    }
+  }
 
   async function startPayment() {
     setBusy(true);
@@ -203,12 +255,35 @@ export function PaymentPanel(props: Props) {
         </button>
       )}
 
-      <div className="rounded-xl border border-line bg-paper px-4 py-3 text-xs text-mute">
-        <p className="font-medium text-ink">Demo card / mobile money</p>
-        <p className="mt-1">
-          The amount is fixed server-side at {props.amountLabel}; the browser never sends a price.
-        </p>
-      </div>
+      {props.transactionId ? (
+        <div className="rounded-xl border border-line bg-paper px-4 py-3 text-xs text-mute">
+          {exhausted ? (
+            <>
+              <p className="font-medium text-ink">Still waiting on Flutterwave</p>
+              <p className="mt-1">
+                If your payment went through, it can take a few seconds to register. Checking
+                again issues the ticket the moment it clears.
+              </p>
+              <button
+                onClick={checkAgain}
+                disabled={checking}
+                className="btn-ghost mt-3 w-full"
+              >
+                {checking ? "Checking…" : "Check again"}
+              </button>
+            </>
+          ) : (
+            <p>Confirming your payment with Flutterwave…</p>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-line bg-paper px-4 py-3 text-xs text-mute">
+          <p className="font-medium text-ink">Demo card / mobile money</p>
+          <p className="mt-1">
+            The amount is fixed server-side at {props.amountLabel}; the browser never sends a price.
+          </p>
+        </div>
+      )}
     </section>
   );
 }

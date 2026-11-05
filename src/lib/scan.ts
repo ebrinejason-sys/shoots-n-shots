@@ -50,19 +50,21 @@ export async function scanTicket(rawCode: string, staffLabel: string): Promise<S
       ticket_id: string;
       ticket_status: string;
       used_at: Date | null;
+      admits: number;
+      attendee_label: string | null;
       booking_status: string;
       customer_name: string;
       reference: string;
-      quantity: number;
       event_name: string;
     }>(
       `SELECT t.id AS ticket_id,
               t.status AS ticket_status,
               t.used_at,
+              t.admits,
+              t.attendee_label,
               b.status AS booking_status,
               b.customer_name,
               b.reference,
-              b.quantity,
               e.name AS event_name
        FROM tickets t
        JOIN bookings b ON b.id = t.booking_id
@@ -85,7 +87,7 @@ export async function scanTicket(rawCode: string, staffLabel: string): Promise<S
       customerName: row.customer_name,
       eventName: row.event_name,
       reference: row.reference,
-      quantity: row.quantity,
+      quantity: row.admits,
       scannedAt,
     };
 
@@ -136,7 +138,7 @@ export async function scanTicket(rawCode: string, staffLabel: string): Promise<S
     return {
       ...details,
       outcome: "VALID" as const,
-      message: `Admit ${row.quantity} ${row.quantity === 1 ? "guest" : "guests"}.`,
+      message: `Admit ${row.admits} ${row.admits === 1 ? "guest" : "guests"}.`,
       usedAt: new Date(marked.rows[0].used_at).toISOString(),
     };
   });
@@ -148,6 +150,8 @@ export interface TicketView {
   customerName: string;
   reference: string;
   quantity: number;
+  admits: number;
+  attendeeLabel: string | null;
   amountMinor: number;
   currency: string;
   bookingStatus: string;
@@ -167,6 +171,8 @@ export async function getTicketView(token: string): Promise<TicketView | null> {
               b.customer_name AS "customerName",
               b.reference,
               b.quantity,
+              t.admits,
+              t.attendee_label AS "attendeeLabel",
               b.amount_minor AS "amountMinor",
               b.currency,
               b.status AS "bookingStatus",

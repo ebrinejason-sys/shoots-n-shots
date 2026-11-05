@@ -1,8 +1,38 @@
 import { confirmBooking, type ConfirmResult } from "./booking";
+import { APP_URL } from "./config";
 import { deliverTicket } from "./delivery";
 import type { TicketMessage } from "./delivery";
 import { formatMoney } from "./money";
 import { qrPngUrlFor, ticketUrlFor } from "./tickets";
+import type { BookingRow, EventRow, TicketRow } from "./types";
+
+/** Builds the delivery payload for one or more admission codes. */
+export function buildTicketMessage(
+  booking: BookingRow,
+  event: EventRow,
+  tickets: TicketRow[],
+  appUrl: string = APP_URL,
+): TicketMessage {
+  const items = tickets.map((ticket) => ({
+    index: ticket.attendee_index,
+    label: ticket.attendee_label ?? booking.customer_name,
+    ticketUrl: ticketUrlFor(ticket.id, appUrl),
+    qrPngUrl: qrPngUrlFor(ticket.id, appUrl),
+  }));
+
+  return {
+    customerName: booking.customer_name,
+    phone: booking.phone,
+    email: booking.email,
+    eventName: event.name,
+    eventVenue: event.venue,
+    eventStartsAt: event.starts_at,
+    quantity: booking.quantity,
+    reference: booking.reference,
+    amountLabel: formatMoney(booking.amount_minor, booking.currency),
+    tickets: items,
+  };
+}
 
 /**
  * Marks a booking paid and issues its ticket, then dispatches delivery.
@@ -18,22 +48,9 @@ export async function fulfilBooking(
   if (result.alreadyConfirmed) return result;
 
   const { booking, event } = result;
-  const message: TicketMessage = {
-    customerName: booking.customer_name,
-    phone: booking.phone,
-    email: booking.email,
-    eventName: event.name,
-    eventVenue: event.venue,
-    eventStartsAt: event.starts_at,
-    quantity: booking.quantity,
-    reference: booking.reference,
-    amountLabel: formatMoney(booking.amount_minor, booking.currency),
-    ticketUrl: ticketUrlFor(booking.id),
-    qrPngUrl: qrPngUrlFor(booking.id),
-  };
 
   try {
-    await deliverTicket(booking.id, message);
+    await deliverTicket(booking.id, buildTicketMessage(booking, event, [result.ticket]));
   } catch (error) {
     console.error("ticket delivery failed", error);
   }

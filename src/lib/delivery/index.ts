@@ -34,6 +34,16 @@ export async function deliverTicket(
   const results: DeliveryResult[] = [];
 
   for (const channel of resolveChannels()) {
+    // Walk-in customers may not share an address; that is a skip, not a fault.
+    if (channel.name === "email" && !message.email) {
+      await query(
+        `INSERT INTO delivery_outbox (booking_id, channel, status, attempts, last_error)
+         VALUES ($1, $2, 'SKIPPED', 0, $3)`,
+        [bookingId, channel.name, "booking has no email address"],
+      );
+      continue;
+    }
+
     let result: DeliveryResult;
     try {
       result = await channel.send(message);

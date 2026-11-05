@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findBookingByProviderRef, getBookingContext } from "@/lib/booking";
+import { failBooking, findBookingByProviderRef, getBookingContext } from "@/lib/booking";
 import { fulfilBooking } from "@/lib/fulfil";
 import { minorToMajor } from "@/lib/money";
 import {
@@ -41,6 +41,16 @@ export async function POST(request: Request) {
 
   const booking = await findBookingByProviderRef(txRef);
   if (!booking) {
+    return NextResponse.json({ received: true });
+  }
+
+  // A verified transaction for someone else's reference must not touch this booking.
+  if (transaction.txRef !== txRef) {
+    return NextResponse.json({ received: true });
+  }
+
+  if (transaction.status === "failed" || transaction.status === "cancelled") {
+    await failBooking(booking.reference);
     return NextResponse.json({ received: true });
   }
 

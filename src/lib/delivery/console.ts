@@ -5,8 +5,9 @@ import type { DeliveryChannel } from "./types";
 export const consoleChannel: DeliveryChannel = {
   name: "console",
   async send(message) {
+    const links = message.tickets.map((ticket) => ticket.ticketUrl).join(", ");
     console.log(
-      `[delivery:console] ${message.customerName} <${message.phone}> → ${message.ticketUrl}`,
+      `[delivery:console] ${message.customerName} <${message.phone}> → ${links}`,
     );
     return { ok: true, detail: "logged to server console" };
   },

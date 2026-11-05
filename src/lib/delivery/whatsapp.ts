@@ -19,6 +19,9 @@ export const whatsappChannel: DeliveryChannel = {
     const to = normalisePhone(message.phone);
     if (!to) return { ok: false, detail: "booking has no usable phone number" };
 
+    const first = message.tickets[0];
+    if (!first) return { ok: false, detail: "booking has no ticket" };
+
     const payload = whatsapp.templateName
       ? {
           messaging_product: "whatsapp",
@@ -30,7 +33,7 @@ export const whatsappChannel: DeliveryChannel = {
             components: [
               {
                 type: "header",
-                parameters: [{ type: "image", image: { link: message.qrPngUrl } }],
+                parameters: [{ type: "image", image: { link: first.qrPngUrl } }],
               },
               {
                 type: "body",
@@ -49,8 +52,8 @@ export const whatsappChannel: DeliveryChannel = {
           to,
           type: "image",
           image: {
-            link: message.qrPngUrl,
-            caption: `${message.eventName} — ${message.quantity} ticket(s), ref ${message.reference}\n${message.ticketUrl}`,
+            link: first.qrPngUrl,
+            caption: `${message.eventName} — ${message.quantity} ticket(s), ref ${message.reference}\n${first.ticketUrl}`,
           },
         };
 

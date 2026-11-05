@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS bookings (
   currency         char(3) NOT NULL,
   status           text NOT NULL DEFAULT 'PENDING'
                    CHECK (status IN ('PENDING', 'PAID', 'FAILED', 'REFUNDED', 'CANCELLED')),
+  channel          text NOT NULL DEFAULT 'ONLINE' CHECK (channel IN ('ONLINE', 'GATE')),
+  payment_method   text CHECK (payment_method IN ('CASH', 'MOBILE_MONEY')),
+  sold_by          text,
   provider         text NOT NULL DEFAULT 'flutterwave',
   provider_ref     text NOT NULL UNIQUE,
   provider_tx_id   text UNIQUE,
@@ -38,18 +41,52 @@ CREATE TABLE IF NOT EXISTS bookings (
   created_at       timestamptz NOT NULL DEFAULT now()
 );
 
+-- Additive migrations for databases created before gate sales existed.
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS channel text NOT NULL DEFAULT 'ONLINE';
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_method text;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS sold_by text;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'bookings'::regclass AND conname = 'bookings_channel_check'
+  ) THEN
+    ALTER TABLE bookings ADD CONSTRAINT bookings_channel_check
+      CHECK (channel IN ('ONLINE', 'GATE'));
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'bookings'::regclass AND conname = 'bookings_payment_method_check'
+  ) THEN
+    ALTER TABLE bookings ADD CONSTRAINT bookings_payment_method_check
+      CHECK (payment_method IS NULL OR payment_method IN ('CASH', 'MOBILE_MONEY'));
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS bookings_event_idx ON bookings (event_id);
 CREATE INDEX IF NOT EXISTS bookings_status_idx ON bookings (status);
 CREATE INDEX IF NOT EXISTS bookings_expiry_idx ON bookings (expires_at) WHERE status = 'PENDING';
 
 CREATE TABLE IF NOT EXISTS tickets (
-  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  booking_id uuid NOT NULL UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,
-  token_hash text NOT NULL UNIQUE,
-  status     text NOT NULL DEFAULT 'VALID' CHECK (status IN ('VALID', 'USED', 'VOID')),
-  issued_at  timestamptz NOT NULL DEFAULT now(),
-  used_at    timestamptz
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  booking_id     uuid NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  token_hash     text NOT NULL UNIQUE,
+  status         text NOT NULL DEFAULT 'VALID' CHECK (status IN ('VALID', 'USED', 'VOID')),
+  admits         integer NOT NULL DEFAULT 1 CHECK (admits > 0),
+  attendee_index integer NOT NULL DEFAULT 1 CHECK (attendee_index > 0),
+  attendee_label text,
+  issued_at      timestamptz NOT NULL DEFAULT now(),
+  used_at        timestamptz
 );
+
+-- One booking can now hold several tickets (gate sales issue one per attendee).
+ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_booking_id_key;
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS admits integer NOT NULL DEFAULT 1;
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS attendee_index integer NOT NULL DEFAULT 1;
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS attendee_label text;
+CREATE UNIQUE INDEX IF NOT EXISTS tickets_booking_attendee_idx
+  ON tickets (booking_id, attendee_index);
 
 CREATE TABLE IF NOT EXISTS scan_logs (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),

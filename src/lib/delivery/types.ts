@@ -1,3 +1,10 @@
+export interface TicketItem {
+  index: number;
+  label: string;
+  ticketUrl: string;
+  qrPngUrl: string;
+}
+
 export interface TicketMessage {
   customerName: string;
   phone: string;
@@ -8,8 +15,9 @@ export interface TicketMessage {
   quantity: number;
   reference: string;
   amountLabel: string;
-  ticketUrl: string;
-  qrPngUrl: string;
+  // One entry per admission code: online bookings carry one, gate sales one
+  // per attendee.
+  tickets: TicketItem[];
 }
 
 export interface DeliveryResult {

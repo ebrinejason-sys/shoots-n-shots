@@ -42,12 +42,23 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
                 timeZone: event.timezone,
               }).format(startsAt)}
             </p>
-            <h1 className="display mt-3 text-4xl leading-none text-ink sm:text-5xl">
+            <h1 className="display mt-3 text-5xl leading-none text-ink sm:text-6xl">
               {event.name}
             </h1>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-mute">
               {event.description}
             </p>
+            <div className="mt-6 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-mute">
+              <span className="rounded-full border border-line bg-paper/60 px-3 py-1.5">
+                {event.venue}
+              </span>
+              <span className="rounded-full border border-line bg-paper/60 px-3 py-1.5">
+                {formatMoney(event.price_minor, event.currency)} per ticket
+              </span>
+              <span className="rounded-full border border-accent/40 bg-accent-soft px-3 py-1.5 text-accent">
+                QR ticket by email
+              </span>
+            </div>
           </div>
         </div>
 
@@ -68,6 +79,21 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
             tone={remaining > 0 ? "default" : "hot"}
           />
         </dl>
+
+        <div className="rounded-2xl border border-line bg-surface px-6 py-5">
+          <div className="flex items-baseline justify-between text-[11px] uppercase tracking-[0.16em]">
+            <span className="text-mute">Door progress</span>
+            <span className={remaining > 0 ? "text-mute" : "text-hot"}>
+              {event.sold} of {event.capacity} gone
+            </span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-line">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-accent to-hot"
+              style={{ width: `${event.capacity ? Math.round((event.sold / event.capacity) * 100) : 0}%` }}
+            />
+          </div>
+        </div>
       </section>
 
       <section className="lg:sticky lg:top-24 lg:self-start">

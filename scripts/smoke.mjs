@@ -80,7 +80,30 @@ function tokenFromUrl(url) {
   return new URL(url, BASE_URL).pathname.split("/").filter(Boolean).at(-1);
 }
 
-const db = new pg.Client({ connectionString: DATABASE_URL });
+// Mirrors src/lib/db-config.ts: hosted databases (Supabase) need TLS.
+function sslFor(connectionString) {
+  let host = "";
+  let mode = null;
+  try {
+    const url = new URL(connectionString);
+    host = url.hostname;
+    mode = url.searchParams.get("sslmode");
+  } catch {
+    // fall through to "not local"
+  }
+  if (mode === "disable") return null;
+  const local = host === "" || host === "localhost" || host === "127.0.0.1" || host === "::1";
+  if (mode === "require" || (process.env.DATABASE_SSL ?? "").toLowerCase() === "true" || !local) {
+    return { rejectUnauthorized: false };
+  }
+  return null;
+}
+
+const dbSsl = sslFor(DATABASE_URL);
+const db = new pg.Client({
+  connectionString: DATABASE_URL,
+  ...(dbSsl ? { ssl: dbSsl } : {}),
+});
 
 try {
   await db.connect();
@@ -144,6 +167,75 @@ try {
     outcome: "decline",
   });
   check("declined payment is marked failed", refused.response.status === 200 && refused.data.status === "failed");
+
+  // --- Gate sale: one single-use code per attendee -------------------------
+  const anonymousGate = await post("/api/gate-sales", {
+    slug: SLUG,
+    customerName: "Walk In",
+    email: "walkin@example.com",
+    quantity: 1,
+    method: "CASH",
+  });
+  check(
+    "anonymous gate sale is rejected",
+    anonymousGate.response.status === 401,
+    String(anonymousGate.response.status),
+  );
+
+  const gate = await post(
+    "/api/gate-sales",
+    {
+      slug: SLUG,
+      customerName: "Gate Tester",
+      email: "gate@example.com",
+      phone: "+256700000002",
+      quantity: 3,
+      method: "CASH",
+    },
+    { Cookie: cookie },
+  );
+  check("gate sale records a paid booking → 201", gate.response.status === 201, JSON.stringify(gate.data));
+
+  const gateTickets = Array.isArray(gate.data.tickets) ? gate.data.tickets : [];
+  check("gate sale issues one code per guest", gateTickets.length === 3, String(gateTickets.length));
+  check("gate codes are distinct", new Set(gateTickets.map((ticket) => ticket.token)).size === 3);
+
+  let gateAdmits = 0;
+  for (const [index, ticket] of gateTickets.entries()) {
+    const scan = await post("/api/scan", { code: ticket.ticketUrl }, { Cookie: cookie });
+    check(`gate code ${index + 1} scans VALID`, scan.data.outcome === "VALID", scan.data.outcome);
+    check(`gate code ${index + 1} admits one guest`, scan.data.quantity === 1, String(scan.data.quantity));
+    gateAdmits += Number(scan.data.quantity ?? 0);
+
+    const repeat = await post("/api/scan", { code: ticket.token }, { Cookie: cookie });
+    check(
+      `gate code ${index + 1} is single use`,
+      repeat.data.outcome === "ALREADY_USED",
+      repeat.data.outcome,
+    );
+  }
+  check("gate sale admits exactly its party", gateAdmits === 3, String(gateAdmits));
+
+  const gateRow = await db.query(
+    `SELECT b.status, b.channel, b.payment_method, count(t.id)::int AS tickets
+     FROM bookings b LEFT JOIN tickets t ON t.booking_id = b.id
+     WHERE b.reference = $1
+     GROUP BY b.id`,
+    [gate.data.reference],
+  );
+  const stored = gateRow.rows[0] ?? {};
+  check(
+    "gate booking stored as paid, GATE, cash",
+    stored.status === "PAID" && stored.channel === "GATE" && stored.payment_method === "CASH",
+    JSON.stringify(stored),
+  );
+  check("gate booking has three ticket rows", stored.tickets === 3, String(stored.tickets));
+
+  const printPage = await fetch(`${BASE_URL}${gate.data.printUrl}`, {
+    headers: { Cookie: cookie },
+    redirect: "manual",
+  });
+  check("printed code sheet renders", printPage.status === 200, String(printPage.status));
 
   console.log(`\n${passed} checks passed.`);
 } catch (error) {

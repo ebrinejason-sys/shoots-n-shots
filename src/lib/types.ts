@@ -31,6 +31,9 @@ export interface BookingRow {
   amount_minor: number;
   currency: string;
   status: BookingStatus;
+  channel: "ONLINE" | "GATE";
+  payment_method: "CASH" | "MOBILE_MONEY" | null;
+  sold_by: string | null;
   provider: string;
   provider_ref: string;
   provider_tx_id: string | null;
@@ -44,6 +47,9 @@ export interface TicketRow {
   booking_id: string;
   token_hash: string;
   status: TicketStatus;
+  admits: number;
+  attendee_index: number;
+  attendee_label: string | null;
   issued_at: Date;
   used_at: Date | null;
 }

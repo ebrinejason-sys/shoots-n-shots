@@ -59,9 +59,14 @@ export function BookingForm({ slug, priceMinor, currency, remaining }: Props) {
       onSubmit={handleSubmit}
       className="space-y-5 rounded-2xl border border-line bg-surface p-6"
     >
-      <div>
-        <h2 className="display text-lg text-ink">Book your ticket</h2>
-        <p className="mt-1 text-sm text-mute">Payment happens on the next step.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="display text-2xl leading-none text-ink">Book your ticket</h2>
+          <p className="mt-2 text-sm text-mute">Payment happens on the next step.</p>
+        </div>
+        <span className="shrink-0 rounded-full border border-line bg-paper px-3 py-1 text-xs font-semibold text-accent">
+          {formatMoney(priceMinor, currency)}
+        </span>
       </div>
 
       <Field label="Full name" hint={null}>
@@ -87,10 +92,7 @@ export function BookingForm({ slug, priceMinor, currency, remaining }: Props) {
         />
       </Field>
 
-      <Field
-        label="Email"
-        hint="Required by the payment provider; used to resend your ticket."
-      >
+      <Field label="Email" hint="Your QR ticket is sent here — double-check it.">
         <input
           name="email"
           type="email"
@@ -139,13 +141,13 @@ export function BookingForm({ slug, priceMinor, currency, remaining }: Props) {
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-accent/90 disabled:opacity-60"
-      >
-        {pending ? "Creating booking…" : "Continue to payment"}
+      <button type="submit" disabled={pending} className="btn-primary w-full">
+        {pending ? "Creating booking…" : `Continue to payment · ${formatMoney(total, currency)}`}
       </button>
+
+      <p className="text-center text-xs text-mute/70">
+        Seats are held for 20 minutes while you pay. Cancel and they return to sale.
+      </p>
     </form>
   );
 }

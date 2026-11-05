@@ -9,10 +9,11 @@ export const smsChannel: DeliveryChannel = {
       return { ok: false, detail: "Africa's Talking is not configured" };
     }
 
+    const links = message.tickets.map((ticket) => ticket.ticketUrl).join(" ");
     const body = new URLSearchParams({
       username: africasTalking.username,
       to: message.phone,
-      message: `${message.eventName}: ${message.quantity} ticket(s), ref ${message.reference}. ${message.ticketUrl}`,
+      message: `${message.eventName}: ${message.quantity} ticket(s), ref ${message.reference}. ${links}`,
     });
     if (africasTalking.senderId) body.set("from", africasTalking.senderId);
 

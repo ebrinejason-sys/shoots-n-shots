@@ -1,4 +1,5 @@
 import { resend } from "../config";
+import { buildQrMatrix, qrToPng } from "../qr";
 import type { DeliveryChannel, DeliveryResult } from "./types";
 
 function escapeHtml(value: string): string {
@@ -16,18 +17,43 @@ export const emailChannel: DeliveryChannel = {
     if (!resend.apiKey) {
       return { ok: false, detail: "Resend is not configured" };
     }
+    if (!message.email) {
+      return { ok: false, detail: "booking has no email address" };
+    }
+
+    // Embed the PNG in the message so the code renders even when the app runs
+    // on localhost and has no public URL.
+    const attachments = message.tickets.map((ticket) => ({
+      filename: `ticket-${ticket.index}.png`,
+      content: qrToPng(buildQrMatrix(ticket.ticketUrl), { scale: 8, margin: 4 }).toString(
+        "base64",
+      ),
+      content_id: `ticket-qr-${ticket.index}`,
+    }));
+
+    const codes = message.tickets
+      .map(
+        (ticket) => `
+        <div style="margin:0 0 24px;padding:16px;border:1px solid #ddd;border-radius:12px">
+          <p style="margin:0 0 12px;font-weight:600">${escapeHtml(ticket.label)}</p>
+          <img src="cid:ticket-qr-${ticket.index}" alt="Ticket QR code"
+               width="220" height="220" style="display:block;border:1px solid #ddd" />
+          <p style="margin:12px 0 0">
+            <a href="${escapeHtml(ticket.ticketUrl)}">Open this ticket</a>
+          </p>
+        </div>`,
+      )
+      .join("");
 
     const html = `
-      <div style="font-family:system-ui,sans-serif;max-width:520px">
+      <div style="font-family:system-ui,sans-serif;max-width:560px">
         <h2 style="margin:0 0 4px">${escapeHtml(message.eventName)}</h2>
         <p style="color:#555;margin:0 0 16px">${escapeHtml(message.eventVenue)}</p>
         <p>Hi ${escapeHtml(message.customerName)},</p>
         <p>Your booking <strong>${escapeHtml(message.reference)}</strong> is paid:
            ${message.quantity} ticket(s), ${escapeHtml(message.amountLabel)}.</p>
-        <p><img src="${escapeHtml(message.qrPngUrl)}" alt="Ticket QR code"
-                width="240" height="240" style="border:1px solid #ddd" /></p>
-        <p>Show this code at the entrance, or open your ticket:
-           <a href="${escapeHtml(message.ticketUrl)}">${escapeHtml(message.ticketUrl)}</a></p>
+        ${codes}
+        <p style="color:#555">Show a code at the entrance. Each code is single use.</p>
       </div>`;
 
     const response = await fetch("https://api.resend.com/emails", {
@@ -39,8 +65,9 @@ export const emailChannel: DeliveryChannel = {
       body: JSON.stringify({
         from: resend.from,
         to: message.email,
-        subject: `Your ticket for ${message.eventName}`,
+        subject: `Your ticket${message.tickets.length > 1 ? "s" : ""} for ${message.eventName}`,
         html,
+        attachments,
       }),
       cache: "no-store",
     });

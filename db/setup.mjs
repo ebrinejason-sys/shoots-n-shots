@@ -1,4 +1,5 @@
 // Applies db/schema.sql and seeds a demo event. Safe to run repeatedly.
+import { createHash, createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,13 +29,48 @@ loadEnv();
 const connectionString =
   process.env.DATABASE_URL ?? "postgres://sns:sns_dev_password@localhost:5432/sns_tickets";
 
-const client = new pg.Client({ connectionString });
+// Must match src/lib/db-config.ts: hosted Postgres needs TLS, local Docker does not.
+function sslFor(url) {
+  const parsed = new URL(url);
+  const local = ["localhost", "127.0.0.1", "::1", ""].includes(parsed.hostname);
+  const mode = parsed.searchParams.get("sslmode");
+  if (mode === "disable") return undefined;
+  if (mode === "require" || (process.env.DATABASE_SSL ?? "").toLowerCase() === "true" || !local) {
+    return process.env.DATABASE_SSL_CA
+      ? { ca: process.env.DATABASE_SSL_CA, rejectUnauthorized: true }
+      : { rejectUnauthorized: false };
+  }
+  return undefined;
+}
+
+const client = new pg.Client({ connectionString, ssl: sslFor(connectionString) });
 
 try {
   await client.connect();
   const schema = readFileSync(join(here, "schema.sql"), "utf8");
   await client.query(schema);
   console.log("schema applied");
+
+  // Tickets used to carry one code per booking. Re-derive every hash from the
+  // ticket id so old links keep working under the per-ticket scheme.
+  const secret = process.env.TICKET_SECRET ?? "dev-only-insecure-ticket-secret-change-me";
+  const tickets = await client.query(`SELECT id FROM tickets`);
+  for (const ticket of tickets.rows) {
+    const token = createHmac("sha256", secret)
+      .update(`ticket:${ticket.id}`)
+      .digest("base64url")
+      .slice(0, 32);
+    const hash = createHash("sha256").update(token).digest("hex");
+    await client.query(`UPDATE tickets SET token_hash = $2 WHERE id = $1`, [ticket.id, hash]);
+  }
+  if (tickets.rowCount > 0) console.log(`re-derived tokens for ${tickets.rowCount} ticket(s)`);
+
+  // Online tickets admit the whole booking; gate tickets are created with 1.
+  await client.query(
+    `UPDATE tickets t SET admits = b.quantity
+     FROM bookings b
+     WHERE t.booking_id = b.id AND b.channel = 'ONLINE' AND t.admits <> b.quantity`,
+  );
 
   // Rename the original demo event in place so existing bookings keep their event_id.
   await client.query(

@@ -33,10 +33,58 @@ html {
 
 /* Poster display type: heavy, tight, all caps. */
 .display {
-  font-weight: 900;
-  letter-spacing: -0.02em;
-  line-height: 0.9;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.005em;
+  line-height: 0.92;
   text-transform: uppercase;
+}
+
+/* Ticker under the hero. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-track {
+  animation: marquee 32s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
+/* Corner brackets for the scanner viewfinder. */
+.viewfinder::before,
+.viewfinder::after {
+  content: "";
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border: 2px solid rgba(242, 240, 234, 0.85);
+  pointer-events: none;
+}
+
+.viewfinder::before {
+  top: 14px;
+  left: 14px;
+  border-right: 0;
+  border-bottom: 0;
+  border-top-left-radius: 14px;
+}
+
+.viewfinder::after {
+  right: 14px;
+  bottom: 14px;
+  border-left: 0;
+  border-top: 0;
+  border-bottom-right-radius: 14px;
 }
 
 .glow-blue {
@@ -85,4 +133,50 @@ html {
   display: block;
   width: 100%;
   height: auto;
+}
+
+/* Printable admission codes: white sheet, one ticket block per attendee. */
+@media print {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .print-ticket {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 12mm;
+    border: 1px solid #111 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .print-ticket * {
+    color: #000 !important;
+    background: transparent !important;
+  }
+
+  .print-ticket .qr-frame {
+    background: #fff !important;
+    padding: 0 !important;
+  }
+
+  .print-ticket .qr-frame svg {
+    width: 44mm !important;
+    height: 44mm !important;
+  }
 }

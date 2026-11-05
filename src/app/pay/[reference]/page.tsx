@@ -22,7 +22,7 @@ export default async function PayPage({
   if (!context) notFound();
 
   const { booking, event } = context;
-  const ticketUrl = ticketUrlFor(booking.id);
+  const ticketUrl = context.ticketId ? ticketUrlFor(context.ticketId) : "";
   const transactionId = query.transaction_id ?? null;
 
   return (

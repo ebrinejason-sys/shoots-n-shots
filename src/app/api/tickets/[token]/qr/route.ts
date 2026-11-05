@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { APP_URL } from "@/lib/config";
+import { resolveAppUrl } from "@/lib/app-url";
 import { buildQrMatrix, qrToPng } from "@/lib/qr";
 import { getTicketView } from "@/lib/scan";
 import { TOKEN_PATTERN } from "@/lib/tickets";
@@ -18,7 +18,8 @@ export async function GET(
     return new NextResponse("Not found", { status: 404 });
   }
 
-  const png = qrToPng(buildQrMatrix(`${APP_URL}/t/${token}`), {
+  const appUrl = await resolveAppUrl();
+  const png = qrToPng(buildQrMatrix(`${appUrl}/t/${token}`), {
     scale: 10,
     margin: 4,
   });

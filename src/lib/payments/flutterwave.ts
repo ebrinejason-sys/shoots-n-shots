@@ -46,6 +46,9 @@ export async function initiatePayment(input: InitiateInput): Promise<string> {
         title: input.title,
         description: "Event ticket",
       },
+      // Mirrored back by the dashboard and the webhook so a payment can be
+      // traced even when the customer closes the browser before redirecting.
+      meta: { reference: input.txRef },
     }),
     cache: "no-store",
   });
@@ -65,6 +68,7 @@ export interface VerifiedTransaction {
   amount: number;
   currency: string;
   status: string;
+  paymentType: string;
 }
 
 interface VerifyResponse {
@@ -76,6 +80,7 @@ interface VerifyResponse {
     amount?: number | string;
     currency?: string;
     status?: string;
+    payment_type?: string;
   };
 }
 
@@ -104,6 +109,7 @@ export async function verifyTransactionById(
     amount: Number(data.amount ?? 0),
     currency: String(data.currency ?? ""),
     status: String(data.status ?? ""),
+    paymentType: String(data.payment_type ?? ""),
   };
 }
 

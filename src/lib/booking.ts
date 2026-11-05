@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { PoolClient } from "pg";
 import { query, withTransaction } from "./db";
@@ -7,8 +8,8 @@ import { hashToken, ticketTokenFor } from "./tickets";
 import { PENDING_BOOKING_MINUTES } from "./config";
 import type { BookingRow, EventRow, TicketRow } from "./types";
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_PATTERN = /^\+?[0-9][0-9\s()-]{6,30}$/;
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const PHONE_PATTERN = /^\+?[0-9][0-9\s()-]{6,30}$/;
 
 export const bookingInputSchema = z.object({
   slug: z.string().trim().min(1).max(120),
@@ -122,7 +123,8 @@ export async function confirmBooking(
   reference: string,
   providerTxId: string,
 ): Promise<ConfirmResult | null> {
-  return withTransaction(async (client) => {
+  try {
+    return await withTransaction(async (client) => {
     const updated = await client.query<BookingRow>(
       `UPDATE bookings
        SET status = 'PAID', paid_at = now(), provider_tx_id = $2
@@ -162,17 +164,26 @@ export async function confirmBooking(
       }
       ticket = found.rows[0];
     } else {
-      const token = ticketTokenFor(booking.id);
+      const ticketId = randomUUID();
+      const token = ticketTokenFor(ticketId);
       ticket = (
         await client.query<TicketRow>(
-          `INSERT INTO tickets (booking_id, token_hash) VALUES ($1, $2) RETURNING *`,
-          [booking.id, hashToken(token)],
+          `INSERT INTO tickets
+             (id, booking_id, token_hash, admits, attendee_index, attendee_label)
+           VALUES ($1, $2, $3, $4, 1, $5)
+           RETURNING *`,
+          [ticketId, booking.id, hashToken(token), booking.quantity, booking.customer_name],
         )
       ).rows[0];
     }
 
     return { booking, event, ticket, alreadyConfirmed };
   });
+  } catch (error) {
+    // The same provider transaction may only ever confirm one booking.
+    if ((error as { code?: string }).code === "23505") return null;
+    throw error;
+  }
 }
 
 export async function failBooking(reference: string): Promise<BookingRow | null> {
@@ -198,15 +209,34 @@ export interface BookingContext {
   booking: BookingRow;
   event: EventRow;
   hasTicket: boolean;
+  ticketId: string | null;
+  ticketStatus: string | null;
+  ticketAdmits: number | null;
 }
 
 export async function getBookingContext(reference: string): Promise<BookingContext | null> {
-  const result = await query<BookingRow & { event_row: EventRow; has_ticket: boolean }>(
+  const result = await query<
+    BookingRow & {
+      event_row: EventRow;
+      ticket_id: string | null;
+      ticket_status: string | null;
+      ticket_admits: number | null;
+    }
+  >(
     `SELECT b.*,
             to_jsonb(e.*) AS event_row,
-            EXISTS (SELECT 1 FROM tickets t WHERE t.booking_id = b.id) AS has_ticket
+            t.id AS ticket_id,
+            t.status AS ticket_status,
+            t.admits AS ticket_admits
      FROM bookings b
      JOIN events e ON e.id = b.event_id
+     LEFT JOIN LATERAL (
+       SELECT id, status, admits
+       FROM tickets
+       WHERE booking_id = b.id
+       ORDER BY attendee_index
+       LIMIT 1
+     ) t ON true
      WHERE b.reference = $1`,
     [reference],
   );
@@ -215,7 +245,10 @@ export async function getBookingContext(reference: string): Promise<BookingConte
   return {
     booking: row,
     event: row.event_row,
-    hasTicket: row.has_ticket,
+    hasTicket: row.ticket_id !== null,
+    ticketId: row.ticket_id,
+    ticketStatus: row.ticket_status,
+    ticketAdmits: row.ticket_admits,
   };
 }
 
@@ -246,16 +279,28 @@ export async function listActiveEvents(): Promise<EventRow[]> {
 
 export interface AdminBookingRow extends BookingRow {
   event_name: string;
+  ticket_count: number;
+  tickets_used: number;
   ticket_status: string | null;
-  ticket_used_at: Date | null;
 }
 
 export async function listBookings(limit = 50): Promise<AdminBookingRow[]> {
+  // A gate sale has one ticket per attendee, so joining directly would repeat
+  // the booking row. Aggregate instead.
   const result = await query<AdminBookingRow>(
-    `SELECT b.*, e.name AS event_name, t.status AS ticket_status, t.used_at AS ticket_used_at
+    `SELECT b.*, e.name AS event_name,
+            COALESCE(t.ticket_count, 0)::int AS ticket_count,
+            COALESCE(t.tickets_used, 0)::int AS tickets_used,
+            t.ticket_status
      FROM bookings b
      JOIN events e ON e.id = b.event_id
-     LEFT JOIN tickets t ON t.booking_id = b.id
+     LEFT JOIN LATERAL (
+       SELECT count(*)::int AS ticket_count,
+              count(*) FILTER (WHERE status = 'USED')::int AS tickets_used,
+              (array_agg(status ORDER BY attendee_index))[1] AS ticket_status
+       FROM tickets
+       WHERE booking_id = b.id
+     ) t ON true
      ORDER BY b.created_at DESC
      LIMIT $1`,
     [limit],

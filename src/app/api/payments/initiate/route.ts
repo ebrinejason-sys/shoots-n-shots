@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { resolveAppUrl } from "@/lib/app-url";
 import { getBookingContext } from "@/lib/booking";
-import { APP_URL, MOCK_PAYMENTS } from "@/lib/config";
+import { MOCK_PAYMENTS } from "@/lib/config";
 import { minorToMajor } from "@/lib/money";
 import { initiatePayment } from "@/lib/payments/flutterwave";
 import { ticketUrlFor } from "@/lib/tickets";
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
   if (context.booking.status === "PAID") {
     return NextResponse.json({
       mode: "paid",
-      ticketUrl: ticketUrlFor(context.booking.id),
+      ticketUrl: context.ticketId ? ticketUrlFor(context.ticketId) : null,
     });
   }
 
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    const appUrl = await resolveAppUrl();
     const checkoutUrl = await initiatePayment({
       txRef: context.booking.provider_ref,
       amountMinor: context.booking.amount_minor,
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
       phone: context.booking.phone,
       name: context.booking.customer_name,
       title: context.event.name,
-      redirectUrl: `${APP_URL}/pay/${context.booking.reference}`,
+      redirectUrl: `${appUrl}/pay/${context.booking.reference}`,
     });
     return NextResponse.json({ mode: "checkout", checkoutUrl });
   } catch (error) {

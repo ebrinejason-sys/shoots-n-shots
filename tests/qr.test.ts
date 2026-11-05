@@ -1,3 +1,5 @@
+import jsQR from "jsqr";
+import { PNG } from "pngjs";
 import { describe, expect, it } from "vitest";
 import { buildQrMatrix, qrToPng, qrToSvg } from "../src/lib/qr";
 import { encodeGrayscalePng } from "../src/lib/png";
@@ -60,5 +62,25 @@ describe("PNG rendering", () => {
     expect(png.subarray(0, 8).equals(PNG_SIGNATURE)).toBe(true);
     expect(png.readUInt32BE(16)).toBe(2);
     expect(png.readUInt32BE(20)).toBe(2);
+  });
+});
+
+describe("QR round trip", () => {
+  // The page, the PNG endpoint, the email attachment and the printed sheet all
+  // render the same matrix, so a correct decode here covers all four.
+  it.each([
+    "https://tickets.shotsandsecrets.example/t/AbCdEfGhIjKlMnOpQrStUvWxYz012345",
+    "http://192.168.1.186:3000/t/ZyXwVuTsRqPoNmLkJiHgFeDcBa987654",
+  ])("decodes %s from the rendered PNG", (url) => {
+    const png = qrToPng(buildQrMatrix(url), { scale: 6, margin: 4 });
+    const image = PNG.sync.read(png);
+    const decoded = jsQR(
+      new Uint8ClampedArray(image.data),
+      image.width,
+      image.height,
+      { inversionAttempts: "dontInvert" },
+    );
+
+    expect(decoded?.data).toBe(url);
   });
 });

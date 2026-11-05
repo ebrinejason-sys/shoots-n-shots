@@ -1,5 +1,6 @@
 import pg from "pg";
 import type { PoolClient, QueryResult, QueryResultRow } from "pg";
+import { databaseConfig } from "./db-config";
 
 // Postgres returns int8 as a string to avoid precision loss. Our amounts and
 // counts are far below Number.MAX_SAFE_INTEGER, so numbers are safe here.
@@ -7,14 +8,7 @@ pg.types.setTypeParser(20, (value) => Number(value));
 
 const globalForPool = globalThis as unknown as { __snsPool?: pg.Pool };
 
-export const pool =
-  globalForPool.__snsPool ??
-  new pg.Pool({
-    connectionString:
-      process.env.DATABASE_URL ??
-      "postgres://sns:sns_dev_password@localhost:5432/sns_tickets",
-    max: 10,
-  });
+export const pool = globalForPool.__snsPool ?? new pg.Pool(databaseConfig());
 
 if (process.env.NODE_ENV !== "production") {
   globalForPool.__snsPool = pool;

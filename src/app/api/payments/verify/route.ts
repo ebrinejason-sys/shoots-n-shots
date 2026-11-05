@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   if (context.booking.status === "PAID") {
     return NextResponse.json({
       status: "paid",
-      ticketUrl: ticketUrlFor(context.booking.id),
+      ticketUrl: context.ticketId ? ticketUrlFor(context.ticketId) : null,
     });
   }
 
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       status: "paid",
-      ticketUrl: ticketUrlFor(result.booking.id),
+      ticketUrl: ticketUrlFor(result.ticket.id),
     });
   } catch (error) {
     console.error("payment verification failed", error);

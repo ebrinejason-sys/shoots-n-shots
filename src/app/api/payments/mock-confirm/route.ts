@@ -51,6 +51,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     status: "paid",
-    ticketUrl: ticketUrlFor(result.booking.id),
+    ticketUrl: ticketUrlFor(result.ticket.id),
   });
 }

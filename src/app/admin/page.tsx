@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/LogoutButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { getAdminTotals, listBookings, listRecentScans } from "@/lib/booking";
 import { getStaffSession } from "@/lib/auth";
 import { formatMoney } from "@/lib/money";
+import { getSetupStatus } from "@/lib/setup";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,8 @@ export default async function AdminPage() {
     listRecentScans(25),
     getAdminTotals(),
   ]);
+  const setup = getSetupStatus();
+  const outstanding = setup.filter((item) => !item.done).length;
 
   return (
     <div className="space-y-8">
@@ -42,7 +46,10 @@ export default async function AdminPage() {
           <h1 className="display mt-1 text-3xl leading-none text-ink">Operations</h1>
           <p className="mt-2 text-sm text-mute">Signed in as {session.label}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/admin/gate" className="btn-primary">
+            Sell at gate
+          </Link>
           <RefreshButton />
           <LogoutButton />
         </div>
@@ -59,6 +66,46 @@ export default async function AdminPage() {
       </section>
 
       <section className="space-y-3">
+        <div className="flex items-baseline justify-between gap-4">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.22em] text-mute">
+            Go-live checklist
+          </h2>
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${
+              outstanding === 0
+                ? "border-accent/50 bg-accent-soft text-accent"
+                : "border-hot/50 bg-hot-soft text-hot"
+            }`}
+          >
+            {outstanding === 0 ? "All set" : `${outstanding} to do`}
+          </span>
+        </div>
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {setup.map((item) => (
+            <li
+              key={item.key}
+              className={`rounded-xl border px-4 py-3 ${
+                item.done ? "border-accent/30 bg-accent-soft/40" : "border-line bg-surface"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-ink">{item.label}</p>
+                <span
+                  className={`shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em] ${
+                    item.done ? "text-accent" : "text-hot"
+                  }`}
+                >
+                  {item.done ? "Ready" : "To do"}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-mute">{item.detail}</p>
+              <p className="mt-1 font-mono text-[10px] text-mute/60">{item.key}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="space-y-3">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.22em] text-mute">
           Recent bookings
         </h2>
@@ -71,7 +118,9 @@ export default async function AdminPage() {
                 <th className="px-4 py-3 font-medium">Qty</th>
                 <th className="px-4 py-3 font-medium">Amount</th>
                 <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Ticket</th>
+                <th className="px-4 py-3 font-medium">Channel</th>
+                <th className="px-4 py-3 font-medium">Codes</th>
+                <th className="px-4 py-3 font-medium">Print</th>
               </tr>
             </thead>
             <tbody>
@@ -92,12 +141,37 @@ export default async function AdminPage() {
                       {booking.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-mute">{booking.ticket_status ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    <span className="rounded-full border border-line px-2 py-0.5 text-[10px] uppercase tracking-[0.1em] text-mute">
+                      {booking.channel === "GATE"
+                        ? booking.payment_method === "MOBILE_MONEY"
+                          ? "Gate · MoMo"
+                          : "Gate · Cash"
+                        : "Online"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-mute">
+                    {booking.ticket_count === 0
+                      ? "—"
+                      : `${booking.tickets_used}/${booking.ticket_count} used`}
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {booking.ticket_count > 0 ? (
+                      <Link
+                        href={`/admin/gate/${booking.reference}`}
+                        className="font-medium text-accent transition hover:underline"
+                      >
+                        Print
+                      </Link>
+                    ) : (
+                      <span className="text-mute">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
               {bookings.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-mute">
+                  <td colSpan={8} className="px-4 py-6 text-center text-mute">
                     No bookings yet.
                   </td>
                 </tr>

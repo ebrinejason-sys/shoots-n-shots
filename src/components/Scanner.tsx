@@ -1,5 +1,6 @@
 "use client";
 
+import jsQR from "jsqr";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface Report {
@@ -28,6 +29,25 @@ function detectorCtor(): BarcodeDetectorCtor | null {
   return scope.BarcodeDetector ?? null;
 }
 
+function decodeFrame(video: HTMLVideoElement, canvas: HTMLCanvasElement): string | null {
+  if (!video.videoWidth || !video.videoHeight) return null;
+
+  const longest = Math.max(video.videoWidth, video.videoHeight);
+  const scale = Math.min(1, 720 / longest);
+  const width = Math.round(video.videoWidth * scale);
+  const height = Math.round(video.videoHeight * scale);
+
+  if (canvas.width !== width) canvas.width = width;
+  if (canvas.height !== height) canvas.height = height;
+
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) return null;
+  context.drawImage(video, 0, 0, width, height);
+
+  const frame = context.getImageData(0, 0, width, height);
+  return jsQR(frame.data, width, height, { inversionAttempts: "attemptBoth" })?.data ?? null;
+}
+
 const OUTCOME_STYLES: Record<Report["outcome"], string> = {
   VALID: "border-accent/60 bg-accent-soft text-ink",
   ALREADY_USED: "border-line bg-surface text-ink",
@@ -51,10 +71,12 @@ const OUTCOME_LABELS: Record<Report["outcome"], string> = {
 
 export function Scanner() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const frameRef = useRef<number | null>(null);
   const resultRef = useRef<HTMLDivElement | null>(null);
   const lastScanRef = useRef<{ code: string; at: number } | null>(null);
+  const lastDecodeRef = useRef(0);
   const busyRef = useRef(false);
 
   const [cameraActive, setCameraActive] = useState(false);
@@ -104,14 +126,6 @@ export function Scanner() {
   const startCamera = useCallback(async () => {
     setCameraError(null);
 
-    const Detector = detectorCtor();
-    if (!Detector) {
-      setCameraError(
-        "This browser has no built-in QR detector. Use the phone's own camera to open the ticket link, or type the code below.",
-      );
-      return;
-    }
-
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" } },
@@ -125,25 +139,36 @@ export function Scanner() {
       await video.play();
       setCameraActive(true);
 
-      const detector = new Detector({ formats: ["qr_code"] });
+      // BarcodeDetector is missing on iOS Safari; fall back to decoding frames
+      // in JavaScript so the door can still use an iPhone.
+      const Detector = detectorCtor();
+      const detector = Detector ? new Detector({ formats: ["qr_code"] }) : null;
 
       const tick = async () => {
         const current = videoRef.current;
         if (!current || !streamRef.current) return;
 
+        let value: string | null = null;
+        const now = Date.now();
         try {
-          const codes = await detector.detect(current);
-          if (codes.length > 0) {
-            const value = codes[0].rawValue;
-            const now = Date.now();
-            const previous = lastScanRef.current;
-            if (!previous || previous.code !== value || now - previous.at > 4000) {
-              lastScanRef.current = { code: value, at: now };
-              await submit(value);
-            }
+          if (detector) {
+            const codes = await detector.detect(current);
+            value = codes[0]?.rawValue ?? null;
+          } else if (now - lastDecodeRef.current > 180) {
+            lastDecodeRef.current = now;
+            canvasRef.current ??= document.createElement("canvas");
+            value = decodeFrame(current, canvasRef.current);
           }
         } catch {
           // Transient decode failures are expected while the camera focuses.
+        }
+
+        if (value) {
+          const previous = lastScanRef.current;
+          if (!previous || previous.code !== value || now - previous.at > 4000) {
+            lastScanRef.current = { code: value, at: now };
+            await submit(value);
+          }
         }
 
         frameRef.current = requestAnimationFrame(() => {
@@ -169,7 +194,7 @@ export function Scanner() {
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <div className="overflow-hidden rounded-2xl border border-line bg-black">
+      <div className="relative overflow-hidden rounded-2xl border border-line bg-black">
         <video ref={videoRef} playsInline muted className="aspect-square w-full object-cover" />
         {!cameraActive ? (
           <div className="flex aspect-square w-full flex-col items-center justify-center gap-2 bg-surface p-6 text-center">
@@ -178,7 +203,15 @@ export function Scanner() {
             </span>
             <span className="text-xs text-mute/60">Point the lens at the QR on the ticket</span>
           </div>
-        ) : null}
+        ) : (
+          <>
+            <div className="viewfinder pointer-events-none absolute inset-0" />
+            <span className="pointer-events-none absolute left-4 top-4 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-ink backdrop-blur">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-hot" />
+              Live
+            </span>
+          </>
+        )}
       </div>
 
       <div className="flex gap-2">
@@ -240,7 +273,7 @@ export function Scanner() {
                 <dd className="font-mono text-xs">{report.reference}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="opacity-60">Tickets</dt>
+                <dt className="opacity-60">Admits</dt>
                 <dd className="font-medium">{report.quantity}</dd>
               </div>
             </dl>
