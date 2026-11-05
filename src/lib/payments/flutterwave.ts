@@ -19,11 +19,30 @@ interface PaymentInitResponse {
   data?: { link?: string };
 }
 
+// Flutterwave rejects the generic "mobilemoney" value; each market has its own.
+const MOBILE_MONEY_BY_CURRENCY: Record<string, string> = {
+  UGX: "mobilemoneyuganda",
+  KES: "mpesa",
+  GHS: "mobilemoneyghana",
+  TZS: "mobilemoneytanzania",
+  RWF: "mobilemoneyrwanda",
+  ZMW: "mobilemoneyzambia",
+  MWK: "mobilemoneymalawi",
+  XOF: "mobilemoneyxof",
+  XAF: "mobilemoneyxaf",
+};
+
+function paymentOptionsFor(currency: string): string {
+  const mobile = MOBILE_MONEY_BY_CURRENCY[currency];
+  return mobile ? `${mobile},card,banktransfer` : "card,banktransfer";
+}
+
 export async function initiatePayment(input: InitiateInput): Promise<string> {
   if (!flutterwave.secretKey) {
     throw new Error("FLUTTERWAVE_SECRET_KEY is not configured");
   }
 
+  const currency = input.currency.trim().toUpperCase();
   const response = await fetch(`${flutterwave.baseUrl}/v3/payments`, {
     method: "POST",
     headers: {
@@ -33,10 +52,10 @@ export async function initiatePayment(input: InitiateInput): Promise<string> {
     body: JSON.stringify({
       tx_ref: input.txRef,
       // Flutterwave expects major units; the accounting stays in minor units.
-      amount: minorToMajor(input.amountMinor, input.currency),
-      currency: input.currency.trim().toUpperCase(),
+      amount: minorToMajor(input.amountMinor, currency),
+      currency,
       redirect_url: input.redirectUrl,
-      payment_options: "mobilemoney,card,banktransfer",
+      payment_options: paymentOptionsFor(currency),
       customer: {
         email: input.email,
         phonenumber: input.phone,
@@ -55,6 +74,7 @@ export async function initiatePayment(input: InitiateInput): Promise<string> {
 
   const payload = (await response.json()) as PaymentInitResponse;
   if (!response.ok || payload.status !== "success" || !payload.data?.link) {
+    console.error("flutterwave initiate rejected", response.status, JSON.stringify(payload));
     throw new Error(
       `Flutterwave checkout failed: ${payload.message ?? `HTTP ${response.status}`}`,
     );
