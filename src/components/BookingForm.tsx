@@ -59,12 +59,12 @@ export function BookingForm({ slug, priceMinor, currency, remaining }: Props) {
       onSubmit={handleSubmit}
       className="space-y-5 rounded-2xl border border-line bg-surface p-6"
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 border-b border-line pb-5">
         <div>
-          <h2 className="display text-2xl leading-none text-ink">Book your ticket</h2>
-          <p className="mt-2 text-sm text-mute">Payment happens on the next step.</p>
+          <p className="eyebrow">Step 1 of 3</p>
+          <h2 className="display mt-2 text-3xl leading-none text-ink">Book your ticket</h2>
         </div>
-        <span className="shrink-0 rounded-full border border-line bg-paper px-3 py-1 text-xs font-semibold text-accent">
+        <span className="tnum shrink-0 rounded-sm border border-accent/30 bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent">
           {formatMoney(priceMinor, currency)}
         </span>
       </div>

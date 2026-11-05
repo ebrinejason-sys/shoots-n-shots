@@ -3,17 +3,12 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
   @apply bg-paper text-ink antialiased;
-  background-image:
-    radial-gradient(900px 520px at 8% -10%, rgba(47, 109, 255, 0.22), transparent 62%),
-    radial-gradient(700px 420px at 98% 2%, rgba(255, 46, 67, 0.13), transparent 60%),
-    radial-gradient(600px 500px at 50% 110%, rgba(47, 109, 255, 0.08), transparent 65%);
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+  background-image: none;
   min-height: 100vh;
 }
 
@@ -22,42 +17,32 @@ html {
 }
 
 ::selection {
-  background: rgba(47, 109, 255, 0.35);
-  color: #ffffff;
+  background: rgba(31, 75, 67, 0.18);
+  color: #141210;
 }
 
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid rgba(47, 109, 255, 0.75);
+  outline: 2px solid rgba(31, 75, 67, 0.7);
   outline-offset: 2px;
 }
 
-/* Poster display type: heavy, tight, all caps. */
+/* Editorial display type: serif, tight, sentence case. */
 .display {
-  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
-  font-weight: 400;
-  letter-spacing: 0.005em;
-  line-height: 0.92;
-  text-transform: uppercase;
+  font-family: var(--font-display), Georgia, ui-serif, serif;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 0.95;
+  font-optical-sizing: auto;
 }
 
-/* Ticker under the hero. */
-@keyframes marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
+/* Small ruled label used above sections and inside tickets. */
+.eyebrow {
+  @apply text-[11px] font-semibold uppercase tracking-[0.22em] text-mute;
 }
 
-.marquee-track {
-  animation: marquee 32s linear infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .marquee-track {
-    animation: none;
-  }
+/* Numerals and references that must line up in a table. */
+.tnum {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Corner brackets for the scanner viewfinder. */
@@ -67,7 +52,7 @@ html {
   position: absolute;
   width: 44px;
   height: 44px;
-  border: 2px solid rgba(242, 240, 234, 0.85);
+  border: 2px solid rgba(252, 250, 244, 0.9);
   pointer-events: none;
 }
 
@@ -76,7 +61,6 @@ html {
   left: 14px;
   border-right: 0;
   border-bottom: 0;
-  border-top-left-radius: 14px;
 }
 
 .viewfinder::after {
@@ -84,39 +68,29 @@ html {
   bottom: 14px;
   border-left: 0;
   border-top: 0;
-  border-bottom-right-radius: 14px;
-}
-
-.glow-blue {
-  text-shadow: 0 0 34px rgba(47, 109, 255, 0.55);
-}
-
-.glow-hot {
-  text-shadow: 0 0 26px rgba(255, 46, 67, 0.5);
 }
 
 @layer components {
   .input {
-    @apply w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none transition placeholder:text-mute/50 focus:border-accent focus:ring-2 focus:ring-accent/20;
+    @apply w-full rounded-sm border border-line bg-paper px-3 py-2 text-sm text-ink outline-none transition placeholder:text-mute/50 focus:border-accent focus:ring-2 focus:ring-accent/15;
   }
 
   .btn-primary {
-    @apply rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-accent/90 disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-sm bg-accent px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-ink disabled:opacity-50;
   }
 
   .btn-ghost {
-    @apply rounded-xl border border-line bg-transparent px-4 py-3 text-sm font-medium text-mute transition hover:border-accent/60 hover:text-ink disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 rounded-sm border border-line bg-transparent px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-mute transition hover:border-ink hover:text-ink disabled:opacity-40;
+  }
+
+  .btn-link {
+    @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-accent underline decoration-line underline-offset-4 transition hover:decoration-accent;
   }
 }
 
+/* A single warm rule, used under the masthead. */
 .hairline {
-  background-image: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 46, 67, 0.55),
-    rgba(47, 109, 255, 0.55),
-    transparent
-  );
+  background-image: linear-gradient(90deg, transparent, #c9bfab, transparent);
 }
 
 .ticket-edge {

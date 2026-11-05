@@ -4,13 +4,16 @@ import Link from "next/link";
 import { useState } from "react";
 import { formatMoney } from "@/lib/money";
 
-interface Props {
+export interface GateEventOption {
   slug: string;
-  eventName: string;
+  name: string;
   priceMinor: number;
   currency: string;
-  priceLabel: string;
   remaining: number;
+}
+
+interface Props {
+  events: GateEventOption[];
 }
 
 interface SaleTicket {
@@ -29,7 +32,8 @@ interface SaleResult {
   tickets: SaleTicket[];
 }
 
-export function GateSaleForm(props: Props) {
+export function GateSaleForm({ events }: Props) {
+  const [slug, setSlug] = useState(events[0]?.slug ?? "");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -39,8 +43,9 @@ export function GateSaleForm(props: Props) {
   const [error, setError] = useState<string | null>(null);
   const [sale, setSale] = useState<SaleResult | null>(null);
 
-  const max = Math.min(10, Math.max(props.remaining, 1));
-  const total = formatMoney(props.priceMinor * quantity, props.currency);
+  const selected = events.find((event) => event.slug === slug) ?? events[0];
+  const max = Math.min(10, Math.max(selected.remaining, 1));
+  const total = formatMoney(selected.priceMinor * quantity, selected.currency);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -52,7 +57,7 @@ export function GateSaleForm(props: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          slug: props.slug,
+          slug: selected.slug,
           customerName: name,
           email,
           phone,
@@ -87,16 +92,10 @@ export function GateSaleForm(props: Props) {
   if (sale) {
     return (
       <div className="space-y-4">
-        <section className="relative space-y-4 overflow-hidden rounded-2xl border border-accent/50 bg-surface p-6">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-accent/30 blur-3xl"
-          />
-          <div className="relative">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-accent">
-              Paid at the gate · {sale.amountLabel}
-            </p>
-            <h2 className="display mt-2 text-2xl leading-none text-ink">
+        <section className="space-y-4 rounded-2xl border border-accent/40 bg-accent-soft p-6">
+          <div>
+            <p className="eyebrow text-accent">Paid at the gate · {sale.amountLabel}</p>
+            <h2 className="display mt-3 text-2xl leading-none text-ink">
               {sale.quantity} {sale.quantity === 1 ? "code" : "codes"} issued
             </h2>
             <p className="mt-2 text-sm text-mute">
@@ -105,12 +104,12 @@ export function GateSaleForm(props: Props) {
             </p>
           </div>
 
-          <Link href={sale.printUrl} className="btn-primary no-print relative block text-center">
+          <Link href={sale.printUrl} className="btn-primary no-print w-full">
             Open print sheet
           </Link>
         </section>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {sale.tickets.map((ticket) => (
             <div
               key={ticket.index}
@@ -122,14 +121,12 @@ export function GateSaleForm(props: Props) {
                 alt={`QR code for ${ticket.label ?? "ticket"}`}
                 width={96}
                 height={96}
-                className="rounded-lg bg-white p-1"
+                className="rounded-sm bg-white p-1"
               />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-ink">{ticket.label}</p>
                 <p className="mt-1 break-all font-mono text-[11px] text-mute">{ticket.token}</p>
-                <p className="mt-1 text-xs text-mute/70">
-                  Single use · admits one guest
-                </p>
+                <p className="mt-1 text-xs text-mute/70">Single use · admits one guest</p>
               </div>
             </div>
           ))}
@@ -143,17 +140,37 @@ export function GateSaleForm(props: Props) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 rounded-2xl border border-line bg-surface p-6">
+    <form onSubmit={submit} className="space-y-5 rounded-2xl border border-line bg-surface p-6">
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-hot">Walk-in</p>
-        <h2 className="display mt-1 text-2xl leading-none text-ink">{props.eventName}</h2>
-        <p className="mt-2 text-sm text-mute">
-          {props.priceLabel} each · {props.remaining} left
+        <p className="eyebrow text-hot">Walk-in</p>
+        <h2 className="display mt-2 text-3xl leading-none text-ink">{selected.name}</h2>
+        <p className="tnum mt-2 text-sm text-mute">
+          {formatMoney(selected.priceMinor, selected.currency)} each · {selected.remaining} left
         </p>
       </div>
 
+      {events.length > 1 ? (
+        <label className="block space-y-1.5">
+          <span className="eyebrow">Event</span>
+          <select
+            value={slug}
+            onChange={(event) => {
+              setSlug(event.target.value);
+              setQuantity(1);
+            }}
+            className="input"
+          >
+            {events.map((event) => (
+              <option key={event.slug} value={event.slug}>
+                {event.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
       <label className="block space-y-1.5">
-        <span className="text-[11px] uppercase tracking-[0.14em] text-mute">Full name</span>
+        <span className="eyebrow">Full name</span>
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
@@ -165,9 +182,7 @@ export function GateSaleForm(props: Props) {
       </label>
 
       <label className="block space-y-1.5">
-        <span className="text-[11px] uppercase tracking-[0.14em] text-mute">
-          Email — the QR is sent here
-        </span>
+        <span className="eyebrow">Email — the QR is sent here</span>
         <input
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -179,9 +194,7 @@ export function GateSaleForm(props: Props) {
       </label>
 
       <label className="block space-y-1.5">
-        <span className="text-[11px] uppercase tracking-[0.14em] text-mute">
-          Phone (optional)
-        </span>
+        <span className="eyebrow">Phone (optional)</span>
         <input
           value={phone}
           onChange={(event) => setPhone(event.target.value)}
@@ -193,22 +206,22 @@ export function GateSaleForm(props: Props) {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <span className="text-[11px] uppercase tracking-[0.14em] text-mute">Guests</span>
+          <span className="eyebrow">Guests</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setQuantity((value) => Math.max(1, value - 1))}
               disabled={quantity <= 1}
-              className="h-11 w-11 rounded-xl border border-line text-lg text-mute transition hover:border-accent/60 hover:text-ink disabled:opacity-40"
+              className="h-11 w-11 rounded-sm border border-line text-lg text-mute transition hover:border-ink hover:text-ink disabled:opacity-40"
             >
               −
             </button>
-            <span className="w-10 text-center text-lg font-semibold text-ink">{quantity}</span>
+            <span className="tnum w-10 text-center text-lg font-semibold text-ink">{quantity}</span>
             <button
               type="button"
               onClick={() => setQuantity((value) => Math.min(max, value + 1))}
               disabled={quantity >= max}
-              className="h-11 w-11 rounded-xl border border-line text-lg text-mute transition hover:border-accent/60 hover:text-ink disabled:opacity-40"
+              className="h-11 w-11 rounded-sm border border-line text-lg text-mute transition hover:border-ink hover:text-ink disabled:opacity-40"
             >
               +
             </button>
@@ -216,17 +229,17 @@ export function GateSaleForm(props: Props) {
         </div>
 
         <div className="space-y-1.5">
-          <span className="text-[11px] uppercase tracking-[0.14em] text-mute">Payment</span>
+          <span className="eyebrow">Payment</span>
           <div className="grid grid-cols-2 gap-2">
             {(["CASH", "MOBILE_MONEY"] as const).map((option) => (
               <button
                 key={option}
                 type="button"
                 onClick={() => setMethod(option)}
-                className={`h-11 rounded-xl border text-xs font-semibold uppercase tracking-[0.1em] transition ${
+                className={`h-11 rounded-sm border text-[10px] font-semibold uppercase tracking-[0.12em] transition ${
                   method === option
-                    ? "border-accent/60 bg-accent-soft text-accent"
-                    : "border-line text-mute hover:border-accent/40 hover:text-ink"
+                    ? "border-accent bg-accent text-white"
+                    : "border-line text-mute hover:border-ink hover:text-ink"
                 }`}
               >
                 {option === "CASH" ? "Cash" : "Mobile money"}
@@ -237,8 +250,8 @@ export function GateSaleForm(props: Props) {
       </div>
 
       <div className="flex items-baseline justify-between border-t border-dashed border-line pt-4">
-        <span className="text-[11px] uppercase tracking-[0.14em] text-mute">Total collected</span>
-        <span className="text-xl font-semibold text-accent">{total}</span>
+        <span className="eyebrow">Total collected</span>
+        <span className="tnum text-xl font-semibold text-ink">{total}</span>
       </div>
 
       {error ? (

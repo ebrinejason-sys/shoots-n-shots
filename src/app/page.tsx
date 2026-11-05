@@ -1,16 +1,31 @@
 import Link from "next/link";
-import { listActiveEvents } from "@/lib/booking";
+import { listUpcomingEvents } from "@/lib/booking";
 import { formatMoney } from "@/lib/money";
 import type { EventRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+function formatters(timezone: string) {
+  return {
+    weekday: new Intl.DateTimeFormat("en-GB", { weekday: "long", timeZone: timezone }),
+    day: new Intl.DateTimeFormat("en-GB", { day: "2-digit", timeZone: timezone }),
+    month: new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: timezone }),
+    monthShort: new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: timezone }),
+    time: new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: timezone,
+    }),
+  };
+}
 
 export default async function HomePage() {
   let events: EventRow[] = [];
   let databaseDown = false;
 
   try {
-    events = await listActiveEvents();
+    events = await listUpcomingEvents();
   } catch {
     databaseDown = true;
   }
@@ -18,233 +33,214 @@ export default async function HomePage() {
   const nextEvent = events[0] ?? null;
 
   return (
-    <div className="space-y-12">
-      <section className="relative overflow-hidden rounded-3xl border border-line bg-surface">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -left-24 -top-32 h-72 w-72 rounded-full bg-accent/25 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-16 bottom-0 h-56 w-56 rounded-full bg-hot/15 blur-3xl"
-        />
-
-        <div className="relative grid gap-10 px-6 py-10 sm:px-10 sm:py-14 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-hot">
-              House party · Friday 6 Nov
-            </p>
-
-            <h1 className="display mt-4 text-6xl sm:text-8xl">
-              <span className="text-ink">Shots</span>{" "}
-              <span className="text-hot glow-hot">and</span>
-              <br />
-              <span className="text-accent glow-blue">Secrets</span>
-            </h1>
-
-            <p className="mt-5 max-w-md text-sm leading-relaxed text-mute">
-              Come for the shots, stay for the secrets. Pay by mobile money and your QR ticket
-              lands in your inbox — walk in with a single scan.
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-2 text-[11px] font-medium uppercase tracking-[0.14em]">
-              <Chip>8PM till you drop</Chip>
-              <Chip>Drinks on the house</Chip>
-              <Chip>Dress code: party comfy</Chip>
-            </div>
-
-            {nextEvent ? (
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Link
-                  href={`/events/${nextEvent.slug}`}
-                  className="btn-primary inline-flex items-center gap-2"
-                >
-                  Get tickets
-                  <span aria-hidden>→</span>
-                </Link>
-                <span className="text-xs text-mute">
-                  {formatMoney(nextEvent.price_minor, nextEvent.currency)} per person ·{" "}
-                  {Math.max(nextEvent.capacity - nextEvent.sold, 0)} places left
-                </span>
-              </div>
-            ) : null}
-          </div>
-
-          {nextEvent ? <PosterCard event={nextEvent} /> : null}
-        </div>
+    <div className="space-y-16">
+      <section className="grid gap-10 border-b border-line pb-14 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
+        {nextEvent ? <NextEventHero event={nextEvent} /> : <FallbackHero />}
+        {nextEvent ? <TicketStub event={nextEvent} /> : null}
       </section>
 
-      <div className="relative -mt-6 overflow-hidden border-y border-line/70 py-3">
-        <div className="marquee-track flex w-max items-center gap-6 whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.4em] text-mute/60">
-          {Array.from({ length: 2 }).map((_, copy) => (
-            <span key={copy} className="flex items-center gap-6" aria-hidden={copy === 1}>
-              <span>Shots</span>
-              <span className="text-hot">✦</span>
-              <span>Secrets</span>
-              <span className="text-accent">✦</span>
-              <span>One QR at the door</span>
-              <span className="text-hot">✦</span>
-              <span>No queues</span>
-              <span className="text-accent">✦</span>
-            </span>
-          ))}
-        </div>
-      </div>
-
       {databaseDown ? (
-        <div className="rounded-2xl border border-hot/40 bg-hot-soft p-6 text-sm text-ink">
-          <p className="font-medium">The database is not reachable.</p>
-          <p className="mt-1 text-mute">
-            Start Postgres with <code className="font-mono text-ink">docker compose up -d</code>,
-            then run <code className="font-mono text-ink">npm run db:setup</code>.
-          </p>
-        </div>
+        <p className="border-l-2 border-hot pl-4 text-sm text-mute">
+          Tickets are temporarily unavailable. Please check back in a moment.
+        </p>
       ) : null}
 
-      <section className="space-y-4">
-        <div className="flex items-baseline justify-between gap-4">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.28em] text-mute">
-            On sale now
-          </h2>
-          <span className="text-xs text-mute/70">
+      <section id="on-sale" className="scroll-mt-24">
+        <div className="flex items-baseline justify-between gap-4 border-b border-ink pb-3">
+          <h2 className="eyebrow text-ink">On sale now</h2>
+          <span className="tnum text-[11px] uppercase tracking-[0.16em] text-mute">
             {events.length} {events.length === 1 ? "event" : "events"}
           </span>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          {events.map((event) => {
-            const remaining = Math.max(event.capacity - event.sold, 0);
-            const startsAt = new Date(event.starts_at);
-            return (
-              <Link
-                key={event.id}
-                href={`/events/${event.slug}`}
-                className="group relative overflow-hidden rounded-2xl border border-line bg-surface p-6 transition hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-[0_18px_60px_-30px_rgba(47,109,255,0.7)]"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="grid h-16 w-14 shrink-0 place-items-center rounded-xl border border-line bg-paper text-center">
-                    <span className="text-[9px] uppercase tracking-[0.2em] text-hot">
-                      {new Intl.DateTimeFormat("en-GB", {
-                        month: "short",
-                        timeZone: event.timezone,
-                      }).format(startsAt)}
-                    </span>
-                    <span className="display text-2xl leading-none text-ink">
-                      {new Intl.DateTimeFormat("en-GB", {
-                        day: "2-digit",
-                        timeZone: event.timezone,
-                      }).format(startsAt)}
-                    </span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="display text-xl leading-tight text-ink">{event.name}</h3>
-                    <p className="mt-1 text-sm text-mute">{event.venue}</p>
-                    <p className="text-xs text-mute/70">
-                      {new Intl.DateTimeFormat("en-GB", {
-                        weekday: "long",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        timeZone: event.timezone,
-                      }).format(startsAt)}
-                    </p>
-                  </div>
-                  <span className="shrink-0 rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent">
-                    {formatMoney(event.price_minor, event.currency)}
-                  </span>
-                </div>
-                <div className="mt-5 flex items-center justify-between border-t border-line/70 pt-4">
-                  <p
-                    className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${
-                      remaining > 0 ? "text-mute" : "text-hot"
-                    }`}
-                  >
-                    {remaining > 0 ? `${remaining} places left` : "Sold out"}
-                  </p>
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent opacity-0 transition group-hover:opacity-100">
-                    Book now →
-                  </span>
-                </div>
-                <span
-                  aria-hidden
-                  className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-accent/60 to-transparent opacity-0 transition group-hover:opacity-100"
-                />
-              </Link>
-            );
-          })}
-        </div>
+        {events.length > 0 ? (
+          <ol className="divide-y divide-line">
+            {events.map((event, index) => (
+              <li key={event.id}>
+                <EventRowItem event={event} index={index} />
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <div className="py-12">
+            <p className="display text-3xl text-ink">Tickets aren&apos;t on sale yet</p>
+            <p className="mt-3 max-w-md text-sm leading-relaxed text-mute">
+              The next night is being put together. Tickets go live here first — no account needed,
+              just an email for your QR.
+            </p>
+          </div>
+        )}
       </section>
-
-      {!databaseDown && events.length === 0 ? (
-        <p className="text-sm text-mute">
-          No events are on sale. Run <code className="font-mono text-ink">npm run db:setup</code>{" "}
-          to seed the demo event.
-        </p>
-      ) : null}
     </div>
   );
 }
 
-function PosterCard({ event }: { event: EventRow }) {
+function NextEventHero({ event }: { event: EventRow }) {
   const startsAt = new Date(event.starts_at);
-  const format = (options: Intl.DateTimeFormatOptions) =>
-    new Intl.DateTimeFormat("en-GB", { ...options, timeZone: event.timezone }).format(startsAt);
+  const f = formatters(event.timezone);
   const remaining = Math.max(event.capacity - event.sold, 0);
 
   return (
-    <div className="relative mx-auto w-full max-w-sm">
-      <div
-        aria-hidden
-        className="absolute inset-x-8 -bottom-4 h-24 rounded-full bg-accent/30 blur-2xl"
-      />
-      <div className="relative overflow-hidden rounded-2xl border border-line bg-paper shadow-2xl">
-        <div className="hairline h-px w-full" />
-        <div className="flex items-start justify-between gap-4 px-5 pb-5 pt-5">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-mute">Admission</p>
-            <p className="display mt-1 text-6xl leading-none text-ink">
-              {format({ day: "2-digit" })}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="display text-xl leading-none text-hot">{format({ month: "short" })}</p>
-            <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-mute">
-              {format({ weekday: "short" })} · {format({ hour: "2-digit", minute: "2-digit", hour12: false })}
-            </p>
-          </div>
-        </div>
+    <div>
+      <p className="eyebrow">
+        <span className="text-hot">{f.weekday.format(startsAt)}</span>{" "}
+        <span className="text-mute/60">/</span> {f.day.format(startsAt)} {f.month.format(startsAt)}
+      </p>
+      <h1 className="display mt-5 text-6xl text-ink sm:text-7xl lg:text-8xl">{event.name}</h1>
+      <p className="mt-6 max-w-lg text-sm leading-relaxed text-mute">
+        {event.description}
+      </p>
 
-        <div className="border-y border-dashed border-line px-5 py-4">
-          <p className="display text-2xl leading-tight text-ink">{event.name}</p>
-          <p className="mt-1 text-sm text-mute">{event.venue}</p>
+      <dl className="mt-8 flex flex-wrap gap-x-8 gap-y-3 text-sm">
+        <div>
+          <dt className="eyebrow">Venue</dt>
+          <dd className="mt-1 text-ink">{event.venue}</dd>
         </div>
-
-        <div className="flex items-center justify-between px-5 py-4 text-xs">
-          <span className="rounded-full border border-accent/40 bg-accent-soft px-3 py-1 font-semibold text-accent">
+        <div>
+          <dt className="eyebrow">Doors</dt>
+          <dd className="tnum mt-1 text-ink">
+            {f.weekday.format(startsAt)} · {f.time.format(startsAt)}
+          </dd>
+        </div>
+        <div>
+          <dt className="eyebrow">From</dt>
+          <dd className="tnum mt-1 text-ink">
             {formatMoney(event.price_minor, event.currency)}
-          </span>
-          <span className="uppercase tracking-[0.16em] text-mute">
-            {remaining > 0 ? `${remaining} left` : "Sold out"}
-          </span>
+          </dd>
         </div>
+      </dl>
 
-        <div className="flex items-center justify-between border-t border-line px-5 py-3">
-          <span className="text-[9px] font-semibold uppercase tracking-[0.24em] text-mute">
-            Scan at the door
+      <div className="mt-8 flex flex-wrap items-center gap-4">
+        {remaining > 0 ? (
+          <>
+            <Link href={`/events/${event.slug}`} className="btn-primary">
+              Get tickets
+              <span aria-hidden>→</span>
+            </Link>
+            <span className="tnum text-xs uppercase tracking-[0.14em] text-mute">
+              {remaining} of {event.capacity} places left
+            </span>
+          </>
+        ) : (
+          <span className="rounded-sm border border-hot px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-hot">
+            Sold out
           </span>
-          <div
-            aria-hidden
-            className="h-5 w-24 bg-[repeating-linear-gradient(90deg,#f2f0ea_0_2px,transparent_2px_5px)] opacity-25"
-          />
-        </div>
+        )}
       </div>
     </div>
   );
 }
 
-function Chip({ children }: { children: React.ReactNode }) {
+function FallbackHero() {
   return (
-    <span className="rounded-full border border-line bg-paper/60 px-3 py-1.5 text-mute">
-      {children}
-    </span>
+    <div>
+      <p className="eyebrow">Tickets</p>
+      <h1 className="display mt-5 text-6xl text-ink sm:text-7xl lg:text-8xl">
+        Shots <span className="italic text-accent">&amp;</span> Secrets
+      </h1>
+      <p className="mt-6 max-w-md text-sm leading-relaxed text-mute">
+        One night, one ticket, one scan at the door. Pay by mobile money and your QR arrives by
+        email.
+      </p>
+    </div>
+  );
+}
+
+function TicketStub({ event }: { event: EventRow }) {
+  const startsAt = new Date(event.starts_at);
+  const f = formatters(event.timezone);
+  const remaining = Math.max(event.capacity - event.sold, 0);
+
+  return (
+    <div className="ticket-edge relative w-full max-w-sm justify-self-start bg-surface px-6 py-6 shadow-[6px_6px_0_0_#E0D8C9] lg:justify-self-end">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="eyebrow">Admission</p>
+          <p className="display tnum mt-2 text-6xl leading-none text-ink">
+            {f.day.format(startsAt)}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="display text-2xl leading-none text-hot">{f.monthShort.format(startsAt)}</p>
+          <p className="tnum mt-2 text-[10px] uppercase tracking-[0.2em] text-mute">
+            {f.weekday.format(startsAt)} · {f.time.format(startsAt)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-6 border-t border-dashed border-line pt-4">
+        <p className="display text-2xl leading-tight text-ink">{event.name}</p>
+        <p className="mt-1 text-sm text-mute">{event.venue}</p>
+      </div>
+
+      <div className="mt-6 flex items-end justify-between gap-4 border-t border-line pt-4">
+        <div>
+          <p className="eyebrow">Price</p>
+          <p className="tnum mt-1 text-xl font-semibold text-ink">
+            {formatMoney(event.price_minor, event.currency)}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="eyebrow">Left</p>
+          <p className="tnum mt-1 text-xl font-semibold text-ink">
+            {remaining > 0 ? remaining : "—"}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 flex items-center justify-between border-t border-line pt-3">
+        <span className="text-[9px] font-semibold uppercase tracking-[0.24em] text-mute">
+          Scan at the door
+        </span>
+        <span
+          aria-hidden
+          className="h-5 w-24 bg-[repeating-linear-gradient(90deg,#141210_0_2px,transparent_2px_5px)] opacity-70"
+        />
+      </div>
+    </div>
+  );
+}
+
+function EventRowItem({ event, index }: { event: EventRow; index: number }) {
+  const startsAt = new Date(event.starts_at);
+  const f = formatters(event.timezone);
+  const remaining = Math.max(event.capacity - event.sold, 0);
+
+  return (
+    <Link
+      href={`/events/${event.slug}`}
+      className="group flex flex-wrap items-center gap-x-6 gap-y-3 py-6 transition hover:bg-surface/70"
+    >
+      <span className="tnum w-7 text-xs text-mute/60">{String(index + 1).padStart(2, "0")}</span>
+
+      <div className="w-20 shrink-0">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-hot">
+          {f.monthShort.format(startsAt)}
+        </p>
+        <p className="display tnum text-3xl leading-none text-ink">{f.day.format(startsAt)}</p>
+      </div>
+
+      <div className="min-w-[12rem] flex-1">
+        <p className="display text-2xl leading-tight text-ink">{event.name}</p>
+        <p className="mt-1 text-xs text-mute">
+          {event.venue} · <span className="tnum">{f.weekday.format(startsAt)} {f.time.format(startsAt)}</span>
+        </p>
+      </div>
+
+      <div className="text-right">
+        <p className="tnum text-sm font-semibold text-ink">
+          {formatMoney(event.price_minor, event.currency)}
+        </p>
+        <p
+          className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${
+            remaining > 0 ? "text-mute" : "text-hot"
+          }`}
+        >
+          {remaining > 0 ? `${remaining} left` : "Sold out"}
+        </p>
+      </div>
+
+      <span className="btn-primary ml-auto sm:ml-0">Get tickets</span>
+    </Link>
   );
 }

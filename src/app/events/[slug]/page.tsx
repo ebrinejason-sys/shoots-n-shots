@@ -14,55 +14,42 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
 
   const remaining = Math.max(event.capacity - event.sold, 0);
   const startsAt = new Date(event.starts_at);
+  const weekday = new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    timeZone: event.timezone,
+  }).format(startsAt);
+  const day = new Intl.DateTimeFormat("en-GB", { day: "2-digit", timeZone: event.timezone }).format(
+    startsAt,
+  );
+  const month = new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: event.timezone }).format(
+    startsAt,
+  );
+  const time = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: event.timezone,
+  }).format(startsAt);
+  const soldPercent = event.capacity ? Math.round((event.sold / event.capacity) * 100) : 0;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-      <section className="space-y-6">
+    <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr]">
+      <section>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link
-            href="/"
-            className="text-xs font-medium uppercase tracking-[0.16em] text-mute transition hover:text-ink"
-          >
+          <Link href="/#on-sale" className="btn-link">
             ← All events
           </Link>
           <Steps current={1} />
         </div>
 
-        <div className="relative overflow-hidden rounded-3xl border border-line bg-surface p-7">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-accent/20 blur-3xl"
-          />
-          <div className="relative">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-hot">
-              {new Intl.DateTimeFormat("en-GB", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                timeZone: event.timezone,
-              }).format(startsAt)}
-            </p>
-            <h1 className="display mt-3 text-5xl leading-none text-ink sm:text-6xl">
-              {event.name}
-            </h1>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-mute">
-              {event.description}
-            </p>
-            <div className="mt-6 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-mute">
-              <span className="rounded-full border border-line bg-paper/60 px-3 py-1.5">
-                {event.venue}
-              </span>
-              <span className="rounded-full border border-line bg-paper/60 px-3 py-1.5">
-                {formatMoney(event.price_minor, event.currency)} per ticket
-              </span>
-              <span className="rounded-full border border-accent/40 bg-accent-soft px-3 py-1.5 text-accent">
-                QR ticket by email
-              </span>
-            </div>
-          </div>
-        </div>
+        <p className="eyebrow mt-8">
+          <span className="text-hot">{weekday}</span> <span className="text-mute/60">/</span> {day}{" "}
+          {month} · <span className="tnum">{time}</span>
+        </p>
+        <h1 className="display mt-4 text-5xl text-ink sm:text-6xl">{event.name}</h1>
+        <p className="mt-5 max-w-lg text-sm leading-relaxed text-mute">{event.description}</p>
 
-        <dl className="divide-y divide-line rounded-2xl border border-line bg-surface px-6 text-sm">
+        <dl className="mt-10 border-t border-ink">
           <Row label="Venue" value={event.venue} />
           <Row
             label="Doors"
@@ -78,25 +65,23 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
             value={remaining > 0 ? `${remaining} of ${event.capacity} left` : "Sold out"}
             tone={remaining > 0 ? "default" : "hot"}
           />
+          <Row label="Delivery" value="QR ticket by email" />
         </dl>
 
-        <div className="rounded-2xl border border-line bg-surface px-6 py-5">
+        <div className="mt-8">
           <div className="flex items-baseline justify-between text-[11px] uppercase tracking-[0.16em]">
             <span className="text-mute">Door progress</span>
-            <span className={remaining > 0 ? "text-mute" : "text-hot"}>
+            <span className="tnum text-mute">
               {event.sold} of {event.capacity} gone
             </span>
           </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-line">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-accent to-hot"
-              style={{ width: `${event.capacity ? Math.round((event.sold / event.capacity) * 100) : 0}%` }}
-            />
+          <div className="mt-3 h-1.5 w-full bg-line">
+            <div className="h-full bg-ink" style={{ width: `${soldPercent}%` }} />
           </div>
         </div>
       </section>
 
-      <section className="lg:sticky lg:top-24 lg:self-start">
+      <section className="lg:sticky lg:top-28 lg:self-start">
         {remaining > 0 ? (
           <BookingForm
             slug={event.slug}
@@ -105,8 +90,8 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
             remaining={remaining}
           />
         ) : (
-          <div className="rounded-2xl border border-line bg-surface p-6 text-sm text-mute">
-            This event is sold out.
+          <div className="border border-line bg-surface p-6 text-sm text-mute">
+            This event is sold out. Gate sales on the night are cash only.
           </div>
         )}
       </section>
@@ -124,11 +109,9 @@ function Row({
   tone?: "default" | "hot";
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-3.5">
-      <dt className="text-[11px] uppercase tracking-[0.16em] text-mute">{label}</dt>
-      <dd
-        className={`text-right font-medium ${tone === "hot" ? "text-hot" : "text-ink"}`}
-      >
+    <div className="flex items-baseline justify-between gap-4 border-b border-line py-3.5">
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-mute">{label}</dt>
+      <dd className={`text-right text-sm font-medium ${tone === "hot" ? "text-hot" : "text-ink"}`}>
         {value}
       </dd>
     </div>

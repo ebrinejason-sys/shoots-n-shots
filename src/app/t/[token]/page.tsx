@@ -54,16 +54,12 @@ export default async function TicketPage({
       </div>
 
       <article className="overflow-hidden rounded-3xl border border-line bg-surface">
-        <div className="relative overflow-hidden px-6 py-6">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -left-16 -top-24 h-56 w-56 rounded-full bg-accent/30 blur-3xl"
-          />
-          <div className="relative">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-hot">
+        <div className="px-6 py-6">
+          <div>
+            <p className="eyebrow text-hot">
               Admit {ticket.admits > 1 ? `${ticket.admits} people` : "one"}
             </p>
-            <h1 className="display mt-2 text-3xl leading-none text-ink">{ticket.eventName}</h1>
+            <h1 className="display mt-3 text-4xl leading-none text-ink">{ticket.eventName}</h1>
             <p className="mt-2 text-sm text-mute">{ticket.eventVenue}</p>
             {ticket.attendeeLabel ? (
               <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-accent">

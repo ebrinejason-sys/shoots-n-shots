@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/LogoutButton";
 import { RefreshButton } from "@/components/RefreshButton";
-import { getAdminTotals, listBookings, listRecentScans } from "@/lib/booking";
+import { getAdminTotals, listBookings, listRecentScans, listUpcomingEvents } from "@/lib/booking";
 import { getStaffSession } from "@/lib/auth";
 import { formatMoney } from "@/lib/money";
 import { getSetupStatus } from "@/lib/setup";
@@ -28,10 +28,11 @@ export default async function AdminPage() {
   const session = await getStaffSession();
   if (!session) redirect("/scanner/login");
 
-  const [bookings, scans, totals] = await Promise.all([
+  const [bookings, scans, totals, upcoming] = await Promise.all([
     listBookings(40),
     listRecentScans(25),
     getAdminTotals(),
+    listUpcomingEvents(),
   ]);
   const setup = getSetupStatus();
   const outstanding = setup.filter((item) => !item.done).length;
@@ -40,20 +41,60 @@ export default async function AdminPage() {
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-mute">
-            Door control
-          </p>
-          <h1 className="display mt-1 text-3xl leading-none text-ink">Operations</h1>
+          <p className="eyebrow">Door control</p>
+          <h1 className="display mt-2 text-4xl leading-none text-ink">Operations</h1>
           <p className="mt-2 text-sm text-mute">Signed in as {session.label}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/admin/gate" className="btn-primary">
             Sell at gate
           </Link>
+          <Link href="/admin/events" className="btn-ghost">
+            Events
+          </Link>
           <RefreshButton />
           <LogoutButton />
         </div>
       </div>
+
+      <section>
+        <div className="flex items-baseline justify-between gap-4 border-b border-ink pb-2">
+          <h2 className="eyebrow text-ink">On sale now</h2>
+          <Link href="/admin/events" className="btn-link">
+            Manage events
+          </Link>
+        </div>
+        {upcoming.length > 0 ? (
+          <ul className="divide-y divide-line">
+            {upcoming.map((event) => (
+              <li key={event.id}>
+                <Link
+                  href={`/admin/events/${event.id}`}
+                  className="flex flex-wrap items-baseline justify-between gap-3 py-3 text-sm transition hover:text-accent"
+                >
+                  <span className="font-medium text-ink">{event.name}</span>
+                  <span className="tnum text-xs uppercase tracking-[0.12em] text-mute">
+                    {new Intl.DateTimeFormat("en-GB", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                      timeZone: event.timezone,
+                    }).format(new Date(event.starts_at))}
+                    {" · "}
+                    {event.sold}/{event.capacity} sold
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="py-4 text-sm text-mute">
+            Nothing is on sale.{" "}
+            <Link href="/admin/events/new" className="btn-link">
+              Create an event
+            </Link>
+          </p>
+        )}
+      </section>
 
       <section className="grid gap-3 sm:grid-cols-3">
         <Stat label="Paid bookings" value={String(totals.paidBookings)} />

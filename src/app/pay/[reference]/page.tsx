@@ -38,16 +38,10 @@ export default async function PayPage({
           <Steps current={2} />
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-line bg-surface p-6">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-hot/15 blur-3xl"
-          />
-          <div className="relative">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-hot">
-              Order summary
-            </p>
-            <h1 className="display mt-2 text-2xl leading-tight text-ink">{event.name}</h1>
+        <div className="rounded-2xl border border-line bg-surface p-6">
+          <div>
+            <p className="eyebrow text-hot">Order summary</p>
+            <h1 className="display mt-3 text-3xl leading-tight text-ink">{event.name}</h1>
             <p className="mt-1 text-sm text-mute">
               {new Intl.DateTimeFormat("en-GB", {
                 dateStyle: "full",

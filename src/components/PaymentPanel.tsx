@@ -158,25 +158,19 @@ export function PaymentPanel(props: Props) {
     )}`;
 
     return (
-      <section className="relative space-y-4 overflow-hidden rounded-2xl border border-accent/50 bg-surface p-6">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-accent/30 blur-3xl"
-        />
-        <div className="relative">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-accent">
-            Payment confirmed
-          </p>
-          <h2 className="display mt-2 text-3xl leading-none text-ink">
+      <section className="space-y-4 rounded-2xl border border-accent/40 bg-accent-soft p-6">
+        <div>
+          <p className="eyebrow text-accent">Payment confirmed</p>
+          <h2 className="display mt-3 text-3xl leading-none text-ink">
             You&apos;re on the list
           </h2>
-          <p className="mt-2 text-sm text-mute">
+          <p className="mt-3 text-sm text-mute">
             {props.quantity} ticket(s) · {props.amountLabel} · ref{" "}
             <span className="font-mono text-xs text-ink">{props.reference}</span>
           </p>
         </div>
 
-        <Link href={props.ticketUrl} className="btn-primary relative block text-center">
+        <Link href={props.ticketUrl} className="btn-primary w-full">
           Open your ticket
         </Link>
 
@@ -184,12 +178,12 @@ export function PaymentPanel(props: Props) {
           href={whatsappHref}
           target="_blank"
           rel="noreferrer"
-          className="btn-ghost relative block text-center"
+          className="btn-ghost w-full"
         >
           Send it to me on WhatsApp
         </a>
 
-        <p className="relative text-xs text-mute/70">
+        <p className="text-xs text-mute">
           The ticket was also queued on the configured delivery channels. Keep the link — it is
           your entry pass.
         </p>
@@ -200,14 +194,12 @@ export function PaymentPanel(props: Props) {
   if (status === "FAILED" || status === "CANCELLED") {
     return (
       <section className="space-y-3 rounded-2xl border border-hot/50 bg-hot-soft p-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-hot">
-          Payment failed
-        </p>
+        <p className="eyebrow text-hot">Payment failed</p>
         <h2 className="display text-2xl leading-none text-ink">No entry this time</h2>
         <p className="text-sm text-mute">
           This booking is closed and its tickets have been released.
         </p>
-        <Link href="/" className="inline-block text-sm font-medium text-accent hover:underline">
+        <Link href="/" className="btn-link inline-block">
           Start a new booking
         </Link>
       </section>
@@ -217,10 +209,8 @@ export function PaymentPanel(props: Props) {
   return (
     <section className="space-y-4 rounded-2xl border border-line bg-surface p-6">
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-mute">
-          Step 2 of 3
-        </p>
-        <h2 className="display mt-2 text-2xl leading-none text-ink">
+        <p className="eyebrow">Step 2 of 3</p>
+        <h2 className="display mt-3 text-2xl leading-none text-ink">
           Pay {props.amountLabel}
         </h2>
         <p className="mt-2 text-sm text-mute">

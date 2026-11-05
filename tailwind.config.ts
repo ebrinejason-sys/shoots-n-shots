@@ -5,24 +5,32 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        paper: "#05070f",
-        surface: "#0b0f1a",
-        line: "#1d2433",
-        ink: "#f2f0ea",
-        mute: "#8b93a6",
+        paper: "#F6F2E9",
+        surface: "#FCFAF4",
+        line: "#E0D8C9",
+        ink: "#141210",
+        mute: "#6E6659",
         accent: {
-          DEFAULT: "#2f6dff",
-          soft: "#0f1b3d",
+          DEFAULT: "#1F4B43",
+          soft: "#E4ECE7",
         },
         hot: {
-          DEFAULT: "#ff2e43",
-          soft: "#3a0b12",
+          DEFAULT: "#B23A22",
+          soft: "#F7E4DE",
         },
       },
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "-apple-system", "sans-serif"],
-        display: ["var(--font-display)", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "Georgia", "ui-serif", "serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+      },
+      borderRadius: {
+        xl: "2px",
+        "2xl": "3px",
+        "3xl": "4px",
+      },
+      maxWidth: {
+        page: "72rem",
       },
     },
   },

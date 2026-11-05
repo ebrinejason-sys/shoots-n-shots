@@ -277,6 +277,16 @@ export async function listActiveEvents(): Promise<EventRow[]> {
   return result.rows;
 }
 
+/** What the public home page sells: active events that have not finished. */
+export async function listUpcomingEvents(): Promise<EventRow[]> {
+  const result = await query<EventRow>(
+    `SELECT * FROM events
+     WHERE is_active = true AND starts_at > now() - interval '6 hours'
+     ORDER BY starts_at ASC`,
+  );
+  return result.rows;
+}
+
 export interface AdminBookingRow extends BookingRow {
   event_name: string;
   ticket_count: number;

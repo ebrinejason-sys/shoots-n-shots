@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import { Anton, Inter } from "next/font/google";
+import { Fraunces, Inter } from "next/font/google";
 import Link from "next/link";
 import { SiteNav } from "@/components/SiteNav";
 import "./globals.css";
 
-const displayFont = Anton({
+const displayFont = Fraunces({
   subsets: ["latin"],
-  weight: "400",
   variable: "--font-display",
   display: "swap",
 });
@@ -26,20 +25,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${sansFont.variable} ${displayFont.variable} flex min-h-screen flex-col`}>
-        <header className="no-print sticky top-0 z-20 border-b border-line/80 bg-paper/85 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
-            <Link href="/" className="display flex items-baseline gap-1.5 text-sm">
-              <span className="text-accent glow-blue">Shots</span>
-              <span className="text-hot">&amp;</span>
-              <span className="text-ink">Secrets</span>
+        <header className="no-print sticky top-0 z-20 border-b border-line bg-paper/95 backdrop-blur">
+          <div className="mx-auto flex w-full max-w-page items-center justify-between gap-4 px-5 py-4">
+            <Link href="/" className="display text-xl leading-none text-ink">
+              Shots <span className="italic text-accent">&amp;</span> Secrets
             </Link>
             <SiteNav />
           </div>
-          <div className="hairline h-px w-full opacity-40" />
         </header>
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">{children}</main>
-        <footer className="no-print mx-auto w-full max-w-5xl px-4 pb-8 text-xs text-mute/70">
-          Prototype build · Payments run in mock mode unless Flutterwave keys are configured.
+        <main className="mx-auto w-full max-w-page flex-1 px-5 py-10 sm:py-14">{children}</main>
+        <footer className="no-print mx-auto w-full max-w-page border-t border-line px-5 py-8 text-xs text-mute">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>Shots &amp; Secrets · Kampala, Uganda</span>
+            <span className="tnum uppercase tracking-[0.14em]">
+              Tickets scanned at the door · No paper needed
+            </span>
+          </div>
         </footer>
       </body>
     </html>

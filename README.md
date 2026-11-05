@@ -1,8 +1,12 @@
 # Shots & Secrets — Tickets
 
-A working event-ticketing system: booking form → Mobile Money / card payment → automatic QR
-ticket emailed to the guest → scanning at the gate → validity check, plus **gate sales** for
-walk-ins who pay cash or mobile money at the entrance and get a printed code each.
+A working event-ticketing system: create and publish an event in the admin → booking form →
+Mobile Money / card payment → automatic QR ticket emailed to the guest → scanning at the gate →
+validity check, plus **gate sales** for walk-ins who pay cash or mobile money at the entrance and
+get a printed code each.
+
+Events are data, not code: the home page, the event page and the gate picker all read from the
+`events` table, and anything published in `/admin/events` goes on sale immediately.
 
 Built with Next.js 15 (App Router), React 19, TypeScript, Tailwind and Postgres (local Docker or
 **Supabase Cloud**). Payments use Flutterwave v3. The prototype runs in **mock-payment mode by
@@ -35,21 +39,60 @@ Open <http://localhost:3000>.
 
 ### Walk the whole flow
 
-1. **Book** — open the demo event (*Shots & Secrets*, Friday 6 November, 10,000 UGX), enter a
-   name, phone, email and quantity. You are taken to the payment page with a booking reference
-   like `SNS-K7QM2XPD`.
-2. **Pay** — in mock mode press *Approve payment (test)*. This calls the same server-side
+1. **Put an event on sale** — sign in at `/admin`, press *Events* → *New event*. Give it a name,
+   venue, date and time, price, currency and capacity, leave *On sale* checked and save. It appears
+   on the home page under *On sale now* straight away. (Or just use the seeded demo event.)
+2. **Book** — open the event from the home page, enter a name, phone, email and quantity. You are
+   taken to the payment page with a booking reference like `SNS-K7QM2XPD`.
+3. **Pay** — in mock mode press *Approve payment (test)*. This calls the same server-side
    confirmation path a real Flutterwave webhook uses: the booking flips to `PAID`, exactly one
    ticket is issued, and delivery runs.
-3. **Ticket** — the success panel opens `/t/<token>`, showing the customer name, booking
+4. **Ticket** — the success panel opens `/t/<token>`, showing the customer name, booking
    reference, event, quantity, payment status and a QR code.
-4. **Scan** — go to `/scanner`, sign in with the development passcode `staff1234`, then either
+5. **Scan** — go to `/scanner`, sign in with the development passcode `staff1234`, then either
    start the camera and point it at the QR, or paste the ticket URL into the manual box. Scan once
    to see **VALID**, again to see **ALREADY_USED**.
-5. **Operations** — `/admin` lists bookings, revenue and the recent scan log.
-6. **Gate sale** — from `/admin` press *Sell at gate*. Enter the walk-in's name and email, choose
+6. **Operations** — `/admin` lists bookings, revenue and the recent scan log.
+7. **Gate sale** — from `/admin` press *Sell at gate*. Enter the walk-in's name and email, choose
    cash or mobile money, and record the sale. Each guest gets their own single-use code; the sheet
    at `/admin/gate/<reference>` prints one QR block per guest, and the same codes are emailed.
+
+## Managing events
+
+`/admin/events` lists every event with its date, price, `sold/capacity` and a *Published* / *Draft*
+chip. The *On sale* column flips an event on and off without touching anything else; an event that
+is off sale disappears from the public home page and from the gate picker, but its tickets and
+booking links keep working.
+
+The form at `/admin/events/new` (and `/admin/events/<id>` for editing) covers name, description,
+venue, local date and time plus timezone, price and currency, capacity and the on-sale switch.
+
+- **Slugs are fixed at creation** (`The Alchemist, Friday` → `the-alchemist-friday`), because
+  ticket pages and printed QRs point at `/events/<slug>`. Renaming never moves a link;
+  collisions get `-2`, `-3`.
+- **Capacity can never drop below what is already sold** — the save is rejected with the sold count
+  instead of silently overselling.
+- **Local wall-clock time is converted on the client** with `Intl`, so *8:00 PM in Africa/Kampala*
+  stores the right instant regardless of the browser's own timezone.
+
+Both endpoints require a staff session and are rate-limited:
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/admin/events` | `POST` | Create an event (`201` with the row) |
+| `/api/admin/events/<id>` | `PATCH` | Update any subset of fields, including `isActive` |
+
+Validation errors return `400 { error }` with the first readable message; an unauthenticated call
+returns `401`; a capacity below `sold` returns `409`.
+
+## Design
+
+The UI is styled as editorial print rather than a product landing page: warm paper
+(`#F6F2E9`), ink text, hairline rules, deep green for prices and primary actions, vermilion for
+dates and alerts, square corners and no gradients, glows or blur. Type is Fraunces for headings and
+Inter for everything else. All of it lives in the semantic tokens in `tailwind.config.ts` and the
+component classes (`.display`, `.eyebrow`, `.btn-primary`, `.input`) in `src/app/globals.css`, so a
+rebrand is a palette change, not a page rewrite.
 
 ## Supabase Cloud
 
@@ -188,8 +231,8 @@ No advisory affects a runtime dependency this app ships.
 
 - Online bookings still share one QR across the party. Gate sales issue one code per guest; doing
   the same online would mean asking every guest's name at checkout.
-- Gate sales assume a single active event and record the price at sale time; there is no per-event
-  gate price.
+- Gate sales record the price at sale time; there is no separate cash price, door premium or
+  comp/guest-list ticket type.
 - No refunds, voids or transfers, and no resale protection.
 - A payment that arrives **after** the 20-minute hold has expired is not fulfilled automatically:
   the hold is already cancelled and its capacity released, so the payment has to be reconciled
