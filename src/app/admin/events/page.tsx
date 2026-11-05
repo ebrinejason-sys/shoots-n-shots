@@ -4,6 +4,7 @@ import { EventSaleToggle } from "@/components/EventSaleToggle";
 import { getStaffSession } from "@/lib/auth";
 import { listAllEvents } from "@/lib/events";
 import { formatMoney } from "@/lib/money";
+import { eventTone } from "@/lib/tone";
 
 export const dynamic = "force-dynamic";
 
@@ -62,12 +63,18 @@ export default async function AdminEventsPage() {
                 return (
                   <tr key={event.id} className="border-b border-line/70 last:border-0">
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/events/${event.id}`}
-                        className="font-medium text-ink hover:text-accent"
-                      >
-                        {event.name}
-                      </Link>
+                      <span className="flex items-center gap-2">
+                        <span
+                          className={`h-2 w-2 shrink-0 ${eventTone(event.slug).bg}`}
+                          aria-hidden
+                        />
+                        <Link
+                          href={`/admin/events/${event.id}`}
+                          className="font-medium text-ink hover:text-accent"
+                        >
+                          {event.name}
+                        </Link>
+                      </span>
                       <p className="text-xs text-mute">{event.venue}</p>
                     </td>
                     <td className="px-4 py-3 text-xs text-mute">

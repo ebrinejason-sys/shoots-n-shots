@@ -88,10 +88,15 @@ returns `401`; a capacity below `sold` returns `409`.
 ## Design
 
 The UI is styled as editorial print rather than a product landing page: warm paper
-(`#F6F2E9`), ink text, hairline rules, deep green for prices and primary actions, vermilion for
-dates and alerts, square corners and no gradients, glows or blur. Type is Fraunces for headings and
-Inter for everything else. All of it lives in the semantic tokens in `tailwind.config.ts` and the
-component classes (`.display`, `.eyebrow`, `.btn-primary`, `.input`) in `src/app/globals.css`, so a
+(`#F6F2E9`), ink text, hairline rules, square corners and no gradients, glows or blur. Type is
+Fraunces for headings and Inter for everything else.
+
+Colour comes from a fixed print palette — deep green `accent`, vermilion `hot`, ochre `gold`,
+cobalt `cobalt` and plum `plum`, each with a `-soft` tint. Every event is assigned one of the five
+deterministically from its slug (`src/lib/tone.ts`), so the same night is the same colour on the
+home page, its own ticket page and the admin list. A five-stop masthead rule runs across the top of
+every page. All of it lives in the tokens in `tailwind.config.ts` and the component classes
+(`.display`, `.eyebrow`, `.btn-primary`, `.input`, `.masthead`) in `src/app/globals.css`, so a
 rebrand is a palette change, not a page rewrite.
 
 ## Supabase Cloud

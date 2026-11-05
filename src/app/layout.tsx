@@ -26,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className={`${sansFont.variable} ${displayFont.variable} flex min-h-screen flex-col`}>
         <header className="no-print sticky top-0 z-20 border-b border-line bg-paper/95 backdrop-blur">
+          <div className="masthead h-1.5 w-full" aria-hidden />
           <div className="mx-auto flex w-full max-w-page items-center justify-between gap-4 px-5 py-4">
             <Link href="/" className="display text-xl leading-none text-ink">
               Shots <span className="italic text-accent">&amp;</span> Secrets

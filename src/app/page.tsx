@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listUpcomingEvents } from "@/lib/booking";
 import { formatMoney } from "@/lib/money";
+import { eventTone } from "@/lib/tone";
 import type { EventRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -79,11 +80,13 @@ function NextEventHero({ event }: { event: EventRow }) {
   const startsAt = new Date(event.starts_at);
   const f = formatters(event.timezone);
   const remaining = Math.max(event.capacity - event.sold, 0);
+  const tone = eventTone(event.slug);
 
   return (
     <div>
+      <div className={`mb-6 h-1.5 w-16 ${tone.bg}`} aria-hidden />
       <p className="eyebrow">
-        <span className="text-hot">{f.weekday.format(startsAt)}</span>{" "}
+        <span className={tone.text}>{f.weekday.format(startsAt)}</span>{" "}
         <span className="text-mute/60">/</span> {f.day.format(startsAt)} {f.month.format(startsAt)}
       </p>
       <h1 className="display mt-5 text-6xl text-ink sm:text-7xl lg:text-8xl">{event.name}</h1>
@@ -150,52 +153,55 @@ function TicketStub({ event }: { event: EventRow }) {
   const startsAt = new Date(event.starts_at);
   const f = formatters(event.timezone);
   const remaining = Math.max(event.capacity - event.sold, 0);
+  const tone = eventTone(event.slug);
 
   return (
-    <div className="ticket-edge relative w-full max-w-sm justify-self-start bg-surface px-6 py-6 shadow-[6px_6px_0_0_#E0D8C9] lg:justify-self-end">
-      <div className="flex items-start justify-between gap-4">
+    <div className="ticket-edge relative w-full max-w-sm justify-self-start bg-surface shadow-[6px_6px_0_0_#E0D8C9] lg:justify-self-end">
+      <div className={`flex items-start justify-between gap-4 px-6 py-5 text-white ${tone.bg}`}>
         <div>
-          <p className="eyebrow">Admission</p>
-          <p className="display tnum mt-2 text-6xl leading-none text-ink">
-            {f.day.format(startsAt)}
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/75">
+            Admission
           </p>
+          <p className="display tnum mt-2 text-6xl leading-none">{f.day.format(startsAt)}</p>
         </div>
         <div className="text-right">
-          <p className="display text-2xl leading-none text-hot">{f.monthShort.format(startsAt)}</p>
-          <p className="tnum mt-2 text-[10px] uppercase tracking-[0.2em] text-mute">
+          <p className="display text-2xl leading-none">{f.monthShort.format(startsAt)}</p>
+          <p className="tnum mt-2 text-[10px] uppercase tracking-[0.2em] text-white/75">
             {f.weekday.format(startsAt)} · {f.time.format(startsAt)}
           </p>
         </div>
       </div>
 
-      <div className="mt-6 border-t border-dashed border-line pt-4">
-        <p className="display text-2xl leading-tight text-ink">{event.name}</p>
-        <p className="mt-1 text-sm text-mute">{event.venue}</p>
-      </div>
-
-      <div className="mt-6 flex items-end justify-between gap-4 border-t border-line pt-4">
-        <div>
-          <p className="eyebrow">Price</p>
-          <p className="tnum mt-1 text-xl font-semibold text-ink">
-            {formatMoney(event.price_minor, event.currency)}
-          </p>
+      <div className="px-6 pb-6 pt-5">
+        <div className="border-t border-dashed border-line pt-4">
+          <p className="display text-2xl leading-tight text-ink">{event.name}</p>
+          <p className="mt-1 text-sm text-mute">{event.venue}</p>
         </div>
-        <div className="text-right">
-          <p className="eyebrow">Left</p>
-          <p className="tnum mt-1 text-xl font-semibold text-ink">
-            {remaining > 0 ? remaining : "—"}
-          </p>
-        </div>
-      </div>
 
-      <div className="mt-5 flex items-center justify-between border-t border-line pt-3">
-        <span className="text-[9px] font-semibold uppercase tracking-[0.24em] text-mute">
-          Scan at the door
-        </span>
-        <span
-          aria-hidden
-          className="h-5 w-24 bg-[repeating-linear-gradient(90deg,#141210_0_2px,transparent_2px_5px)] opacity-70"
-        />
+        <div className="mt-6 flex items-end justify-between gap-4 border-t border-line pt-4">
+          <div>
+            <p className="eyebrow">Price</p>
+            <p className="tnum mt-1 text-xl font-semibold text-ink">
+              {formatMoney(event.price_minor, event.currency)}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="eyebrow">Left</p>
+            <p className="tnum mt-1 text-xl font-semibold text-ink">
+              {remaining > 0 ? remaining : "—"}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-center justify-between border-t border-line pt-3">
+          <span className="text-[9px] font-semibold uppercase tracking-[0.24em] text-mute">
+            Scan at the door
+          </span>
+          <span
+            aria-hidden
+            className="h-5 w-24 bg-[repeating-linear-gradient(90deg,#141210_0_2px,transparent_2px_5px)] opacity-70"
+          />
+        </div>
       </div>
     </div>
   );
@@ -205,6 +211,7 @@ function EventRowItem({ event, index }: { event: EventRow; index: number }) {
   const startsAt = new Date(event.starts_at);
   const f = formatters(event.timezone);
   const remaining = Math.max(event.capacity - event.sold, 0);
+  const tone = eventTone(event.slug);
 
   return (
     <Link
@@ -213,8 +220,8 @@ function EventRowItem({ event, index }: { event: EventRow; index: number }) {
     >
       <span className="tnum w-7 text-xs text-mute/60">{String(index + 1).padStart(2, "0")}</span>
 
-      <div className="w-20 shrink-0">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-hot">
+      <div className={`w-24 shrink-0 border-l-[3px] px-3 py-2 ${tone.border} ${tone.soft}`}>
+        <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${tone.text}`}>
           {f.monthShort.format(startsAt)}
         </p>
         <p className="display tnum text-3xl leading-none text-ink">{f.day.format(startsAt)}</p>

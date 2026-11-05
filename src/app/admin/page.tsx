@@ -6,6 +6,7 @@ import { getAdminTotals, listBookings, listRecentScans, listUpcomingEvents } fro
 import { getStaffSession } from "@/lib/auth";
 import { formatMoney } from "@/lib/money";
 import { getSetupStatus } from "@/lib/setup";
+import { eventTone } from "@/lib/tone";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +73,10 @@ export default async function AdminPage() {
                   href={`/admin/events/${event.id}`}
                   className="flex flex-wrap items-baseline justify-between gap-3 py-3 text-sm transition hover:text-accent"
                 >
-                  <span className="font-medium text-ink">{event.name}</span>
+                  <span className="flex items-center gap-2">
+                    <span className={`h-2 w-2 ${eventTone(event.slug).bg}`} aria-hidden />
+                    <span className="font-medium text-ink">{event.name}</span>
+                  </span>
                   <span className="tnum text-xs uppercase tracking-[0.12em] text-mute">
                     {new Intl.DateTimeFormat("en-GB", {
                       dateStyle: "medium",
@@ -97,12 +101,13 @@ export default async function AdminPage() {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <Stat label="Paid bookings" value={String(totals.paidBookings)} />
-        <Stat label="Tickets sold" value={String(totals.ticketsSold)} />
+        <Stat label="Paid bookings" value={String(totals.paidBookings)} soft="bg-accent-soft" />
+        <Stat label="Tickets sold" value={String(totals.ticketsSold)} soft="bg-gold-soft" />
         <Stat
           label="Revenue"
           value={formatMoney(totals.revenueMinor, totals.currency)}
           highlight
+          soft="bg-cobalt-soft"
         />
       </section>
 
@@ -271,13 +276,15 @@ function Stat({
   label,
   value,
   highlight = false,
+  soft = "bg-surface",
 }: {
   label: string;
   value: string;
   highlight?: boolean;
+  soft?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-line bg-surface p-4">
+    <div className={`rounded-2xl border border-line p-4 ${soft}`}>
       <p className="text-[10px] uppercase tracking-[0.16em] text-mute">{label}</p>
       <p className={`mt-1 text-2xl font-semibold ${highlight ? "text-accent" : "text-ink"}`}>
         {value}

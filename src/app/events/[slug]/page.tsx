@@ -4,6 +4,7 @@ import { BookingForm } from "@/components/BookingForm";
 import { Steps } from "@/components/Steps";
 import { getEventBySlug } from "@/lib/booking";
 import { formatMoney } from "@/lib/money";
+import { eventTone } from "@/lib/tone";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
     timeZone: event.timezone,
   }).format(startsAt);
   const soldPercent = event.capacity ? Math.round((event.sold / event.capacity) * 100) : 0;
+  const tone = eventTone(event.slug);
 
   return (
     <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr]">
@@ -42,8 +44,9 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
           <Steps current={1} />
         </div>
 
-        <p className="eyebrow mt-8">
-          <span className="text-hot">{weekday}</span> <span className="text-mute/60">/</span> {day}{" "}
+        <div className={`mt-8 h-1.5 w-16 ${tone.bg}`} aria-hidden />
+        <p className="eyebrow mt-6">
+          <span className={tone.text}>{weekday}</span> <span className="text-mute/60">/</span> {day}{" "}
           {month} · <span className="tnum">{time}</span>
         </p>
         <h1 className="display mt-4 text-5xl text-ink sm:text-6xl">{event.name}</h1>
@@ -76,7 +79,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
             </span>
           </div>
           <div className="mt-3 h-1.5 w-full bg-line">
-            <div className="h-full bg-ink" style={{ width: `${soldPercent}%` }} />
+            <div className={`h-full ${tone.bg}`} style={{ width: `${soldPercent}%` }} />
           </div>
         </div>
       </section>

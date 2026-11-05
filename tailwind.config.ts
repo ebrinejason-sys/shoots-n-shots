@@ -18,6 +18,18 @@ const config: Config = {
           DEFAULT: "#B23A22",
           soft: "#F7E4DE",
         },
+        cobalt: {
+          DEFAULT: "#2A4A7F",
+          soft: "#E3E9F4",
+        },
+        gold: {
+          DEFAULT: "#9A6A0E",
+          soft: "#F6ECD2",
+        },
+        plum: {
+          DEFAULT: "#6B3F5E",
+          soft: "#F0E5EC",
+        },
       },
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "-apple-system", "sans-serif"],
