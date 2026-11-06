@@ -112,3 +112,19 @@ CREATE TABLE IF NOT EXISTS delivery_outbox (
 );
 
 CREATE INDEX IF NOT EXISTS delivery_outbox_booking_idx ON delivery_outbox (booking_id);
+
+-- Named admin accounts. Gate scanners still use the shared passcode and have no row here.
+CREATE TABLE IF NOT EXISTS admin_users (
+  id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email                text NOT NULL,
+  name                 text NOT NULL,
+  password_hash        text NOT NULL,
+  must_change_password boolean NOT NULL DEFAULT true,
+  is_active            boolean NOT NULL DEFAULT true,
+  session_version      integer NOT NULL DEFAULT 1,
+  created_at           timestamptz NOT NULL DEFAULT now(),
+  last_login_at        timestamptz,
+  password_changed_at  timestamptz
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS admin_users_email_unique ON admin_users (lower(email));

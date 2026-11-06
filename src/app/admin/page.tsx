@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/LogoutButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { getAdminTotals, listBookings, listRecentScans, listUpcomingEvents } from "@/lib/booking";
-import { getStaffSession } from "@/lib/auth";
+import { requireAdminPage } from "@/lib/guards";
 import { formatMoney } from "@/lib/money";
 import { getSetupStatus } from "@/lib/setup";
 import { eventTone } from "@/lib/tone";
@@ -26,8 +25,7 @@ const RESULT_CLASSES: Record<string, string> = {
 };
 
 export default async function AdminPage() {
-  const session = await getStaffSession();
-  if (!session) redirect("/scanner/login");
+  const admin = await requireAdminPage();
 
   const [bookings, scans, totals, upcoming] = await Promise.all([
     listBookings(40),
@@ -44,7 +42,7 @@ export default async function AdminPage() {
         <div>
           <p className="eyebrow">Door control</p>
           <h1 className="display mt-2 text-4xl leading-none text-ink">Operations</h1>
-          <p className="mt-2 text-sm text-mute">Signed in as {session.label}</p>
+          <p className="mt-2 text-sm text-mute">Signed in as {admin.user.name}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/admin/gate" className="btn-primary">
@@ -52,6 +50,9 @@ export default async function AdminPage() {
           </Link>
           <Link href="/admin/events" className="btn-ghost">
             Events
+          </Link>
+          <Link href="/admin/team" className="btn-ghost">
+            Team
           </Link>
           <RefreshButton />
           <LogoutButton />

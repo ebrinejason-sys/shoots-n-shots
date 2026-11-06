@@ -10,7 +10,7 @@ export function LogoutButton() {
   async function signOut() {
     setBusy(true);
     await fetch("/api/auth/staff", { method: "DELETE" });
-    router.push("/scanner/login");
+    router.push("/admin/login");
     router.refresh();
   }
 

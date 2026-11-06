@@ -32,6 +32,10 @@ npm run db:setup
 ```
 
 ```bash
+npm run db:admins
+```
+
+```bash
 npm run dev
 ```
 
@@ -39,7 +43,7 @@ Open <http://localhost:3000>.
 
 ### Walk the whole flow
 
-1. **Put an event on sale** — sign in at `/admin`, press *Events* → *New event*. Give it a name,
+1. **Put an event on sale** — sign in at `/admin/login`, then press *Events* → *New event*. Give it a name,
    venue, date and time, price, currency and capacity, leave *On sale* checked and save. It appears
    on the home page under *On sale now* straight away. (Or just use the seeded demo event.)
 2. **Book** — open the event from the home page, enter a name, phone, email and quantity. You are
@@ -75,7 +79,7 @@ venue, local date and time plus timezone, price and currency, capacity and the o
 - **Local wall-clock time is converted on the client** with `Intl`, so *8:00 PM in Africa/Kampala*
   stores the right instant regardless of the browser's own timezone.
 
-Both endpoints require a staff session and are rate-limited:
+Both endpoints require an **admin account** and are rate-limited:
 
 | Endpoint | Method | Purpose |
 |---|---|---|
@@ -84,6 +88,33 @@ Both endpoints require a staff session and are rate-limited:
 
 Validation errors return `400 { error }` with the first readable message; an unauthenticated call
 returns `401`; a capacity below `sold` returns `409`.
+
+## Admin accounts
+
+The dashboard, event management and team page belong to named accounts. Door scanners keep the
+shared passcode and reach only `/scanner` and `/admin/gate` — enough to scan and take cash, nothing
+more.
+
+- **First sign-in.** `npm run db:admins` creates the accounts listed in `scripts/seed-admins.mjs`
+  with the temporary password `test1234`. Sign in at `/admin/login`; you are sent straight to
+  `/admin/set-password` and cannot reach anything else until you choose your own password. The
+  temporary one stops working immediately afterwards.
+- **Adding people.** `/admin/team` lists every admin, adds a new one by email, and sends or resends
+  an invite. A new admin gets a generated temporary password shown once on screen and emailed to
+  them; resending replaces the old password and signs that admin out of every device. You cannot
+  reset your own account — ask another admin.
+- **Storage.** Passwords are hashed with scrypt (`N=16384, r=8, p=1`) in `src/lib/password.ts`; the
+  stored string carries its own parameters so they can be raised later without invalidating
+  existing hashes. `scripts/lib/scrypt-hash.mjs` mirrors it for the seed script, and a test pins the
+  two together.
+- **Sessions.** One signed cookie, `sns_staff`, holds either a passcode session or an admin session.
+  `must_change_password`, the account state and `session_version` are re-read from the database on
+  every admin request, so a reset takes effect at once rather than when the cookie expires.
+- **Locked out?** `npm run db:admins -- --reset someone@example.com` issues a fresh temporary
+  password and prints it. Run it against the same `DATABASE_URL` the deployed app uses.
+
+The seed never overwrites an existing account, so re-running `npm run db:setup` or `npm run
+db:admins` cannot undo a password somebody has changed.
 
 ## Design
 
@@ -126,6 +157,7 @@ a pause can take a few seconds.
 | `npm run dev` | Development server on port 3000 |
 | `npm run dev:https` | Same, over HTTPS — needed for camera access from a phone on your LAN |
 | `npm run db:setup` | Applies `db/schema.sql` and seeds the demo event (idempotent) |
+| `npm run db:admins` | Creates the first admin accounts (idempotent); `-- --reset EMAIL` issues a new temporary password |
 | `npm run smoke` | End-to-end HTTP check against a running dev server — bookings, scans and a 3-guest gate sale |
 | `npm test` | Unit tests (money, references, tokens, QR/PNG, staff sessions) |
 | `npx tsc --noEmit` | Type check |
@@ -144,8 +176,8 @@ local development.
 | `MOCK_PAYMENTS` | `true` | `false` enables real Flutterwave checkout |
 | `FLUTTERWAVE_PUBLIC_KEY` / `FLUTTERWAVE_SECRET_KEY` | — | Flutterwave API credentials |
 | `FLUTTERWAVE_WEBHOOK_SECRET` | — | The *secret hash* from the dashboard; arrives as `verif-hash` |
-| `STAFF_PASSCODE` | `staff1234` | Shared gate passcode |
-| `COOKIE_SECRET` | dev placeholder | Signs the staff session cookie |
+| `STAFF_PASSCODE` | `staff1234` | Shared gate passcode — scanning and gate sales only, no admin area |
+| `COOKIE_SECRET` | dev placeholder | Signs the session cookie (passcode staff and admins alike) |
 | `TICKET_SECRET` | dev placeholder | Derives unguessable ticket tokens |
 | `DELIVERY_CHANNELS` | `console,email` | Comma-separated: `console`, `whatsapp`, `sms`, `email` |
 | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TEMPLATE_NAME` | — | WhatsApp Cloud API |

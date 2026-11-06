@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start",
     "db:setup": "node db/setup.mjs",
+    "db:admins": "node scripts/seed-admins.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "smoke": "node scripts/smoke.mjs",

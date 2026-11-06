@@ -1,15 +1,14 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { EventForm, eventToFormValues } from "@/components/EventForm";
-import { getStaffSession } from "@/lib/auth";
 import { getEventById } from "@/lib/events";
+import { requireAdminPage } from "@/lib/guards";
 import { formatMoney } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
 export default async function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
-  const session = await getStaffSession();
-  if (!session) redirect("/scanner/login");
+  await requireAdminPage();
 
   const { id } = await params;
   const event = await getEventById(id);

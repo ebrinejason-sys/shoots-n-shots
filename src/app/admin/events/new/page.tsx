@@ -1,13 +1,11 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { EventForm } from "@/components/EventForm";
-import { getStaffSession } from "@/lib/auth";
+import { requireAdminPage } from "@/lib/guards";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewEventPage() {
-  const session = await getStaffSession();
-  if (!session) redirect("/scanner/login");
+  await requireAdminPage();
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">

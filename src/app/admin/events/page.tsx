@@ -1,16 +1,14 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { EventSaleToggle } from "@/components/EventSaleToggle";
-import { getStaffSession } from "@/lib/auth";
 import { listAllEvents } from "@/lib/events";
+import { requireAdminPage } from "@/lib/guards";
 import { formatMoney } from "@/lib/money";
 import { eventTone } from "@/lib/tone";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminEventsPage() {
-  const session = await getStaffSession();
-  if (!session) redirect("/scanner/login");
+  const admin = await requireAdminPage();
 
   const events = await listAllEvents();
   const now = Date.now();
@@ -21,7 +19,7 @@ export default async function AdminEventsPage() {
         <div>
           <p className="eyebrow">Door control</p>
           <h1 className="display mt-2 text-4xl leading-none text-ink">Events</h1>
-          <p className="mt-2 text-sm text-mute">Signed in as {session.label}</p>
+          <p className="mt-2 text-sm text-mute">Signed in as {admin.user.name}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/admin/events/new" className="btn-primary">

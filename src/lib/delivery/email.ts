@@ -1,5 +1,5 @@
-import { resend } from "../config";
 import { buildQrMatrix, qrToPng } from "../qr";
+import { sendEmail } from "./send";
 import type { DeliveryChannel, DeliveryResult } from "./types";
 
 function escapeHtml(value: string): string {
@@ -14,9 +14,6 @@ function escapeHtml(value: string): string {
 export const emailChannel: DeliveryChannel = {
   name: "email",
   async send(message): Promise<DeliveryResult> {
-    if (!resend.apiKey) {
-      return { ok: false, detail: "Resend is not configured" };
-    }
     if (!message.email) {
       return { ok: false, detail: "booking has no email address" };
     }
@@ -56,26 +53,11 @@ export const emailChannel: DeliveryChannel = {
         <p style="color:#555">Show a code at the entrance. Each code is single use.</p>
       </div>`;
 
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resend.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: resend.from,
-        to: message.email,
-        subject: `Your ticket${message.tickets.length > 1 ? "s" : ""} for ${message.eventName}`,
-        html,
-        attachments,
-      }),
-      cache: "no-store",
+    return sendEmail({
+      to: message.email,
+      subject: `Your ticket${message.tickets.length > 1 ? "s" : ""} for ${message.eventName}`,
+      html,
+      attachments,
     });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      return { ok: false, detail: `Email HTTP ${response.status} ${text.slice(0, 200)}` };
-    }
-    return { ok: true, detail: "accepted by Resend" };
   },
 };

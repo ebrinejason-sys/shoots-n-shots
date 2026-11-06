@@ -1,17 +1,15 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { getStaffSession } from "@/lib/auth";
 import { updateEvent } from "@/lib/events";
+import { requireAdmin } from "@/lib/guards";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await getStaffSession();
-  if (!session) {
-    return NextResponse.json({ error: "Staff sign-in required" }, { status: 401 });
-  }
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard.response;
 
   if (!rateLimit(`events:${clientKey(request)}`, 30, 60_000)) {
     return NextResponse.json({ error: "Too many changes, slow down" }, { status: 429 });
